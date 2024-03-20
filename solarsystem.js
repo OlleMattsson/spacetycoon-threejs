@@ -6,7 +6,7 @@ const solarSystemProperties = {
     rotateY: 10,
     rotateZ: 10,
     showEquatorialGrid: false,
-    showPole: true,
+    showPole: false,
     poleLength: 25
 }
 
@@ -60,7 +60,7 @@ export function initSolarSystem(gui, scene, renderer, camera) {
     
         renderer.render(scene, camera);
     });
-    
+
     solarSystemFolder.add( solarSystemProperties, 'poleLength', 0, 50, 1 ).onChange(v => {
         solarSystemProperties.poleLength = Number(v)
         console.log(solarSystemProperties.poleLength)

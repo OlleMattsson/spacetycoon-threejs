@@ -8,7 +8,7 @@
 import { universeGrid } from "./universeGrid";
 
 export const universeProperties = {
-    showGrid: true,
+    showGrid: false,
     G: 6.67430e-11 // Gravitational constant
 }
 
