@@ -4,7 +4,7 @@ import GUI from 'lil-gui';
 
 import { initUniverse, universeProperties } from "./universe";
 import { initSolarSystem, solarSystem} from "./solarsystem";
-import { drawPlanetToPlanetLine, shipLine, p2pPos } from "./drawPlanetToPlanetLine(p";
+import { drawPlanetToPlanetLine, shipLine, p2pPos } from "./drawPlanetToPlanetLine";
 
 
 const gui = new GUI();
@@ -127,7 +127,7 @@ solarSystem.add(planet1Mesh);
 solarSystem.add(planet2Mesh);
 solarSystem.add(orbitLine1);
 solarSystem.add(orbitLine2);
-solarSystem.add(shipLine);
+//solarSystem.add(shipLine);
 scene.add(solarSystem);
 
 
@@ -292,7 +292,7 @@ function animate(time = 0) {    // default to 0, otherwise time is undefined on 
         end = new THREE.Vector3(p2pPos[3], p2pPos[4], p2pPos[5])    
 
 
-        const speed = 0.005; // Units per second
+        const speed = 0.002; // Units per second
         const distance = start.distanceTo(end);
         const travelTime = distance / speed;
 
@@ -352,7 +352,7 @@ function handleClick() {
             new THREE.BufferAttribute(linePos, 3)
         )
 
-        solarSystem.add(line);
+        //solarSystem.add(line);
         solarSystem.add(shipTrailLine)
 
     } else {
