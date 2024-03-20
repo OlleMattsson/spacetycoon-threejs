@@ -4,6 +4,7 @@ import GUI from 'lil-gui';
 
 import { initUniverse, universeProperties } from "./universe";
 import { initSolarSystem, solarSystem} from "./solarsystem";
+import { drawPlanetToPlanetLine, shipLine, p2pPos } from "./drawPlanetToPlanetLine(p";
 
 
 const gui = new GUI();
@@ -117,16 +118,46 @@ let pointIndex2 = 0; // Keep track of the last point added to the orbit path
 const orbitLine2 = new THREE.Line(orbitGeometry2, orbitMaterial2);
   
 
+
+
+
     
 const planets = [planet1, planet2]
 solarSystem.add(planet1Mesh);
 solarSystem.add(planet2Mesh);
 solarSystem.add(orbitLine1);
 solarSystem.add(orbitLine2);
+solarSystem.add(shipLine);
 scene.add(solarSystem);
 
 
+// placeholder ship object
+const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+const shipObject = new THREE.Mesh(geometry, material);
 
+// line that displays ship's current path
+const geometry1 = new THREE.BufferGeometry()
+const material1 = new THREE.LineBasicMaterial({color: 0xff0000});  
+const linePos = new Float32Array(2*3) // we need two points with three coordinates each
+geometry1.setAttribute(
+    'position', 
+    new THREE.BufferAttribute(linePos, 3)
+)
+const line = new THREE.Line(geometry1, material1)
+
+
+// ship trail
+const shipTrailMaterial = new THREE.LineBasicMaterial({
+    color: 0xffffff, // Change the color as needed
+});
+
+const shipTrailGeo = new THREE.BufferGeometry();
+const shipTrailMaxPoints = 500; // adjust length of orbital path trail
+let shipTrailPositions = new Float32Array(shipTrailMaxPoints * 3); // Each point requires x, y, z coordinates
+shipTrailGeo.setAttribute("position", new THREE.BufferAttribute(shipTrailPositions, 3));
+let shipTrailPointIndex = 0; // Keep track of the last point added to the orbit path
+const shipTrailLine = new THREE.Line(shipTrailGeo, shipTrailMaterial);
 
 
 function updatePlanetPositions(deltaTime) {
@@ -169,6 +200,9 @@ function updatePlanetPositions(deltaTime) {
 
     planet1Mesh.position.set(planets[0].X, planets[0].Y, planets[0].Z);
     planet2Mesh.position.set(planets[1].X, planets[1].Y, planets[1].Z);
+
+
+
 }
 
 // store positions of planets as XYZ points and use that to update a Line geometry
@@ -176,7 +210,7 @@ function drawOrbitalPaths() {
     // planet 1
 
     if (pointIndex1 < maxPoints1) { // store position if there is still space in the array
-        positions1[pointIndex1 * 3] = planet1Mesh.position.x;       // store the position of the planet
+        positions1[pointIndex1 * 3] = planets[0].X;       // store the position of the planet
         positions1[pointIndex1 * 3 + 1] = planet1Mesh.position.y;
         positions1[pointIndex1 * 3 + 2] = planet1Mesh.position.z;
         orbitGeometry1.attributes.position.needsUpdate = true; // Important, indicates the geometry needs to be re-rendered
@@ -206,59 +240,74 @@ function drawOrbitalPaths() {
         orbitGeometry2.attributes.position.needsUpdate = true;
         orbitGeometry2.setDrawRange(0, maxPoints2); // Only draw the part of the geometry that has been updated        
     }
+
+    // ship
+    if (shipTrailPointIndex < shipTrailMaxPoints) {
+        shipTrailPositions[shipTrailPointIndex * 3] = shipObject.position.x;
+        shipTrailPositions[shipTrailPointIndex * 3 + 1] = shipObject.position.y;
+        shipTrailPositions[shipTrailPointIndex * 3 + 2] = shipObject.position.z;
+        shipTrailGeo.attributes.position.needsUpdate = true; // Important, indicates the geometry needs to be re-rendered
+        shipTrailPointIndex++;
+        shipTrailGeo.setDrawRange(1, shipTrailPointIndex -1); // Only draw the part of the geometry that has been updated
+    } else {
+        pushToFixedArray(shipObject.position.x, shipTrailPositions, shipTrailMaxPoints * 3)
+        pushToFixedArray(shipObject.position.y, shipTrailPositions, shipTrailMaxPoints * 3)
+        pushToFixedArray(shipObject.position.z, shipTrailPositions, shipTrailMaxPoints * 3)
+        shipTrailGeo.attributes.position.needsUpdate = true;
+        shipTrailGeo.setDrawRange(0, shipTrailMaxPoints); // Only draw the part of the geometry that has been updated        
+    }
 }
 
-
 let pT = 0;                     // Timestamp of previous frame, previousTime
+
+let elapsedTime = 0; // Track the elapsed time since the start of the movement
+let start, end
+let journeyFraction
+
 
 function animate(time = 0) {    // default to 0, otherwise time is undefined on the very first frame
     requestAnimationFrame(animate);
 
     const dT = (time - pT);     // calculate deltaTime in milliseconds, dT
     pT = time;                  // Update lastTime for the next frame  
+    elapsedTime += dT;
 
     updatePlanetPositions(dT)
     drawOrbitalPaths() 
+    drawPlanetToPlanetLine(planets[0], planets[1])
 
-    controls.update();
-    renderer.render(scene, camera);
-}
+    if(start && end && updateShipPosition) {
+
+        // update end position of ship trajectory line
+        linePos[3] = p2pPos[3]
+        linePos[4] = p2pPos[4]
+        linePos[5] = p2pPos[5]
+
+        geometry1.setAttribute(
+            'position', 
+            new THREE.BufferAttribute(linePos, 3)
+        )
+
+        // update end point of ship
+        end = new THREE.Vector3(p2pPos[3], p2pPos[4], p2pPos[5])    
+
+
+        const speed = 0.005; // Units per second
+        const distance = start.distanceTo(end);
+        const travelTime = distance / speed;
+
+        // Calculate the fraction of the journey completed
+        journeyFraction = (elapsedTime % travelTime) / travelTime;
+
+        // Update object position
+        shipObject.position.lerpVectors(start, end, journeyFraction);    
+    }
+
+        controls.update();
+        renderer.render(scene, camera);
+    }
 
 animate();
-
-
-/*
-// Function to update the axial tilt based on the input value
-function updateAxialTilt() {
-    const axialTiltInputX = document.getElementById('axialTiltInputX');
-    const axialTiltDegreesX = parseFloat(axialTiltInputX.value);
-    const axialTiltRadiansX = axialTiltDegreesX * (Math.PI / 180);
-
-    const axialTiltInputY = document.getElementById('axialTiltInputY');
-    const axialTiltDegreesY = parseFloat(axialTiltInputY.value);
-    const axialTiltRadiansY = axialTiltDegreesY * (Math.PI / 180);
-
-    const axialTiltInputZ = document.getElementById('axialTiltInputZ');
-    const axialTiltDegreesZ = parseFloat(axialTiltInputZ.value);
-    const axialTiltRadiansZ = axialTiltDegreesZ * (Math.PI / 180);
-
-    // Update the sun group's rotation to reflect the new axial tilt
-    solarSystem.rotation.x = axialTiltRadiansX;
-    solarSystem.rotation.y = axialTiltRadiansY;
-    solarSystem.rotation.z = axialTiltRadiansZ;
-
-    // Since the scene has changed, we need to render it again
-    renderer.render(scene, camera);
-}
-
-// Add an event listener to the input box to update the tilt on change
-document.getElementById('axialTiltInputX').addEventListener('change', updateAxialTilt);
-document.getElementById('axialTiltInputY').addEventListener('change', updateAxialTilt);
-document.getElementById('axialTiltInputZ').addEventListener('change', updateAxialTilt);
-
-// Initial rendering of the scene
-updateAxialTilt();
-*/
 
 function pushToFixedArray(item, array, maxLength) {
     if (array.length >= maxLength) {
@@ -272,4 +321,46 @@ function pushToFixedArray(item, array, maxLength) {
         // If the array hasn't reached its max length yet, simply push the item
         array.push(item);
     }
+}
+
+document.addEventListener('click', handleClick)
+
+let updateShipPosition = false
+
+
+
+
+function handleClick() {
+    updateShipPosition = !updateShipPosition
+
+    if (updateShipPosition) {
+
+        solarSystem.add(shipObject);
+        elapsedTime = 0
+        shipTrailPointIndex = 0
+
+
+        linePos[0] = p2pPos[0]
+        linePos[1] = p2pPos[1]
+        linePos[2] = p2pPos[2]
+        linePos[3] = p2pPos[3]
+        linePos[4] = p2pPos[4]
+        linePos[5] = p2pPos[5]
+
+        geometry1.setAttribute(
+            'position', 
+            new THREE.BufferAttribute(linePos, 3)
+        )
+
+        solarSystem.add(line);
+        solarSystem.add(shipTrailLine)
+
+    } else {
+        solarSystem.remove(shipObject);
+        solarSystem.remove(line);
+        solarSystem.remove(shipTrailLine)
+    }
+
+    start = new THREE.Vector3(p2pPos[0], p2pPos[1], p2pPos[2])
+    end = new THREE.Vector3(p2pPos[3], p2pPos[4], p2pPos[5])    
 }
