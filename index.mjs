@@ -1,7 +1,38 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import GUI from 'lil-gui';
+
 
 const G = 6.67430e-11; // Gravitational constant
+const gui = new GUI();
+const guiDomElement = gui.domElement;
+guiDomElement.style.position = 'absolute';
+guiDomElement.style.top = '0px';
+guiDomElement.style.left = '0px';
+guiDomElement.style.removeProperty('right');
+
+// SolarSystem
+const folder = gui.addFolder( 'Solar System' );
+const solarSystemControls = {
+    rotateX: 0,
+    rotateY: 0,
+    rotateZ: 0
+}
+folder.add( solarSystemControls, 'rotateX', -180, 180, 1 ).onChange(v => {
+    solarSystemControls.rotateX = Number(v)
+    solarSystem.rotation.x = solarSystemControls.rotateX * (Math.PI / 180);
+    renderer.render(scene, camera);
+});
+folder.add( solarSystemControls, 'rotateY', -180, 180, 1 ).onChange(v => {
+    solarSystemControls.rotateY = Number(v)
+    solarSystem.rotation.y = solarSystemControls.rotateY * (Math.PI / 180);
+    renderer.render(scene, camera);
+});
+folder.add( solarSystemControls, 'rotateZ', -180, 180, 1 ).onChange(v => {
+    solarSystemControls.rotateZ = Number(v)
+    solarSystem.rotation.z = solarSystemControls.rotateZ * (Math.PI / 180);
+    renderer.render(scene, camera);
+});
 
 
 // Scene setup
@@ -109,7 +140,7 @@ sunLight.position.set(0, 0, 0);
 
 // orbital elements
 const planet1 = {
-    mass: 10000000,
+    mass: 1000000,
     a: 10, // Semi-major axis in meters 
     e: 0.3, // eccentricity
     i: 2, // inclination in degrees
@@ -139,7 +170,7 @@ As positions for the line points are added the the array, the animate function d
 Until the maxPoints1 number is reached, at which point we have drawn the entire path of the planet and no more points are added the the geometry
  
  */
-const maxPoints1 = 250; // Maximum number of points in the orbit path, the path being draw in to short, increase this number
+const maxPoints1 = 500; // Maximum number of points in the orbit path, the path being draw in to short, increase this number
 const orbitGeometry1 = new THREE.BufferGeometry(); // contains the positions used for drawing the line
 const positions1 = new Float32Array(maxPoints1 * 3); // Each point requires x, y, z coordinates
 orbitGeometry1.setAttribute("position", new THREE.BufferAttribute(positions1, 3));
@@ -151,7 +182,7 @@ const orbitLine1 = new THREE.Line(orbitGeometry1, orbitMaterial1); // orbitLine 
     PLANET 2
  */
 const planet2 = {
-    mass: 10000000,
+    mass: 1000000,
     a: 20, // Semi-major axis in meters 
     e: 0.5, // eccentricity
     i: 20, // inclination in degrees
@@ -170,7 +201,7 @@ const orbitMaterial2 = new THREE.LineBasicMaterial({
 });
 
 const orbitGeometry2 = new THREE.BufferGeometry();
-const maxPoints2 = 500; // adjust length of orbital path trail
+const maxPoints2 = 1000; // adjust length of orbital path trail
 const positions2 = new Float32Array(maxPoints2 * 3); // Each point requires x, y, z coordinates
 orbitGeometry2.setAttribute("position", new THREE.BufferAttribute(positions2, 3));
 let pointIndex2 = 0; // Keep track of the last point added to the orbit path
@@ -187,10 +218,11 @@ planets.forEach((p, i) => {
 })
 
 // apply the axial tilt to the entire solarsystem
-solarSystem.rotation.x = 0;
-solarSystem.rotation.y = 0;
-solarSystem.rotation.z = 0;
+solarSystem.rotation.x = solarSystemControls.rotateX * (Math.PI / 180);
+solarSystem.rotation.y = solarSystemControls.rotateY * (Math.PI / 180);
+solarSystem.rotation.z = solarSystemControls.rotateZ * (Math.PI / 180);
 
+console.log(solarSystemControls.x)
 
 solarSystem.add(star);
 solarSystem.add(ambientLight);
@@ -297,7 +329,7 @@ function animate(time = 0) {    // default to 0, otherwise time is undefined on 
 animate();
 
 
-
+/*
 // Function to update the axial tilt based on the input value
 function updateAxialTilt() {
     const axialTiltInputX = document.getElementById('axialTiltInputX');
@@ -328,6 +360,7 @@ document.getElementById('axialTiltInputZ').addEventListener('change', updateAxia
 
 // Initial rendering of the scene
 updateAxialTilt();
+*/
 
 function pushToFixedArray(item, array, maxLength) {
     if (array.length >= maxLength) {
