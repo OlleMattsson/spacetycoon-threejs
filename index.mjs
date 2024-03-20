@@ -160,6 +160,11 @@ let shipTrailPointIndex = 0; // Keep track of the last point added to the orbit 
 const shipTrailLine = new THREE.Line(shipTrailGeo, shipTrailMaterial);
 
 
+
+
+
+
+
 function updatePlanetPositions(deltaTime) {
 
     planets.forEach((p, i) => {
@@ -276,6 +281,9 @@ function animate(time = 0) {    // default to 0, otherwise time is undefined on 
     drawOrbitalPaths() 
     drawPlanetToPlanetLine(planets[0], planets[1])
 
+    planet2Mesh.geometry.computeBoundingSphere();
+    shipObject.geometry.computeBoundingSphere();
+
     if(start && end && updateShipPosition) {
 
         // update end position of ship trajectory line
@@ -300,7 +308,26 @@ function animate(time = 0) {    // default to 0, otherwise time is undefined on 
         journeyFraction = (elapsedTime % travelTime) / travelTime;
 
         // Update object position
-        shipObject.position.lerpVectors(start, end, journeyFraction);    
+        shipObject.position.lerpVectors(start, end, journeyFraction);   
+        
+// Update the boundingSphere centers based on current world positions
+const center1 = shipObject.geometry.boundingSphere.center.clone().add(shipObject.position);
+const center2 = planet2Mesh.geometry.boundingSphere.center.clone().add(planet2Mesh.position);
+        
+        //const distance2 = planet2Mesh.geometry.boundingSphere.center.distanceTo(shipObject.geometry.boundingSphere.center);
+        const distance2 = center1.distanceTo(center2);
+        //console.log(center1, center2, distance2)
+
+        const sumOfRadii = planet2Mesh.geometry.boundingSphere.radius + shipObject.geometry.boundingSphere.radius;
+        
+        if (distance2 < sumOfRadii) {
+            console.log("WE MADE IT!");
+            solarSystem.remove(shipObject);
+            solarSystem.remove(line);
+            solarSystem.remove(shipTrailLine)
+            updateShipPosition = false
+        }
+
     }
 
         controls.update();
@@ -355,12 +382,7 @@ function handleClick() {
         //solarSystem.add(line);
         solarSystem.add(shipTrailLine)
 
-    } else {
-        solarSystem.remove(shipObject);
-        solarSystem.remove(line);
-        solarSystem.remove(shipTrailLine)
     }
-
     start = new THREE.Vector3(p2pPos[0], p2pPos[1], p2pPos[2])
     end = new THREE.Vector3(p2pPos[3], p2pPos[4], p2pPos[5])    
 }
