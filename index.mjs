@@ -2,70 +2,16 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import GUI from 'lil-gui';
 
-import { universeGrid } from "./universeGrid";
-import { createPolarGrid } from "./polarGrid";
+import { initUniverse, universeProperties } from "./universe";
+import { initSolarSystem, solarSystem} from "./solarsystem";
 
 
-const G = 6.67430e-11; // Gravitational constant
 const gui = new GUI();
 const guiDomElement = gui.domElement;
 guiDomElement.style.position = 'absolute';
 guiDomElement.style.top = '0px';
 guiDomElement.style.left = '0px';
 guiDomElement.style.removeProperty('right');
-
-// Universe
-const universeControls = {
-    showGrid: false
-}
-const universeFolder = gui.addFolder( 'Universe' );
-universeFolder.add(universeControls, 'showGrid').onChange(v => {
-    universeControls.showGrid = v
-
-    if (v === true) {
-        scene.add( universeGrid );
-    } else {
-        scene.remove( universeGrid );
-    }
-
-    renderer.render(scene, camera);
-})
-
-
-// SolarSystem
-const solarSystemFolder = gui.addFolder( 'Solar System' );
-const solarSystemControls = {
-    rotateX: 0,
-    rotateY: 0,
-    rotateZ: 0,
-    showEquatorialGrid: false
-}
-solarSystemFolder.add( solarSystemControls, 'rotateX', -180, 180, 1 ).onChange(v => {
-    solarSystemControls.rotateX = Number(v)
-    solarSystem.rotation.x = solarSystemControls.rotateX * (Math.PI / 180);
-    renderer.render(scene, camera);
-});
-solarSystemFolder.add( solarSystemControls, 'rotateY', -180, 180, 1 ).onChange(v => {
-    solarSystemControls.rotateY = Number(v)
-    solarSystem.rotation.y = solarSystemControls.rotateY * (Math.PI / 180);
-    renderer.render(scene, camera);
-});
-solarSystemFolder.add( solarSystemControls, 'rotateZ', -180, 180, 1 ).onChange(v => {
-    solarSystemControls.rotateZ = Number(v)
-    solarSystem.rotation.z = solarSystemControls.rotateZ * (Math.PI / 180);
-    renderer.render(scene, camera);
-});
-solarSystemFolder.add( solarSystemControls, 'showEquatorialGrid' ).onChange(v => {
-    solarSystemControls.showEquatorialGrid = v
-
-    if (v === true) {
-        solarSystem.add( polarGrid );
-    } else {
-        solarSystem.remove( polarGrid );
-    }
-
-    renderer.render(scene, camera);
-});
 
 
 // Scene setup
@@ -94,52 +40,12 @@ controls.zoomSpeed = 1.0;
 controls.update(); // Must be called after any manual changes to the camera's transform
   
 
-
-
-
-
-/**
- * SOLAR SYSTEM
- */
-
-const solarSystem = new THREE.Group();
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.1); // 0xffffff is the color (white), 1.0 is the intensity
-
-
-
-/**
-    SUN
-*/
-
-// Star (Sun)
-const starGeometry = new THREE.SphereGeometry(5, 32, 32);
-const starMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-const star = new THREE.Mesh(starGeometry, starMaterial);
-
-// Define the geometry for the poles
-const poleGeometry = new THREE.BufferGeometry();
-const poleMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 }); 
-const polePoints = [];
-polePoints.push(new THREE.Vector3(0, -20, 0)); // Adjust length as needed
-polePoints.push(new THREE.Vector3(0, 20, 0));  // Adjust length as needed
-poleGeometry.setFromPoints(polePoints);
-const poleLine = new THREE.Line(poleGeometry, poleMaterial);
-
-// Sunlight
-const sunLight = new THREE.PointLight(0xffffff, 100, 1000);
-sunLight.position.set(0, 0, 0);
-
-
-
-
-
-
-
-
+initUniverse(gui, scene, renderer, camera)
+initSolarSystem(gui, scene, renderer, camera)
 
 /**
     PLANET 1
- */
+*/
 
 // orbital elements
 const planet1 = {
@@ -213,34 +119,10 @@ const orbitLine2 = new THREE.Line(orbitGeometry2, orbitMaterial2);
 
     
 const planets = [planet1, planet2]
-
-
-planets.forEach((p, i) => {
-    const mu = G * p.mass
-    planets[i].n = Math.sqrt(mu / Math.pow(p.a, 3));
-})
-
-// apply the axial tilt to the entire solarsystem
-solarSystem.rotation.x = solarSystemControls.rotateX * (Math.PI / 180);
-solarSystem.rotation.y = solarSystemControls.rotateY * (Math.PI / 180);
-solarSystem.rotation.z = solarSystemControls.rotateZ * (Math.PI / 180);
-
-const polarGrid = createPolarGrid(50)
-
-solarSystem.add(star);
-solarSystem.add(ambientLight);
-solarSystem.add(poleLine);
-solarSystem.add(sunLight);
 solarSystem.add(planet1Mesh);
 solarSystem.add(planet2Mesh);
 solarSystem.add(orbitLine1);
 solarSystem.add(orbitLine2);
-// solar system grid
-solarSystemControls.showEquatorialGrid ? solarSystem.add(polarGrid): null;
-
-// universe Grid
-universeControls.showGrid ? scene.add(universeGrid): null;
-
 scene.add(solarSystem);
 
 
@@ -248,7 +130,15 @@ scene.add(solarSystem);
 
 
 function updatePlanetPositions(deltaTime) {
+
     planets.forEach((p, i) => {
+
+        // Standard Gravitational parameter (mu)
+        const mu = universeProperties.G * p.mass
+
+        // Calculate the mean motion (n) - the rate at which the mean anomaly increases
+        planets[i].n = Math.sqrt(mu / Math.pow(p.a, 3));
+
         // update mean anomaly
         p.M += p.n * deltaTime; 
 
