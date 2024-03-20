@@ -1,8 +1,7 @@
 import * as THREE from "three";
 import { createPolarGrid } from "./polarGrid";
 
-
-const solarSystemControls = {
+const solarSystemProperties = {
     rotateX: 10,
     rotateY: 10,
     rotateZ: 10,
@@ -17,23 +16,23 @@ const polarGrid = createPolarGrid(50)
 export function initSolarSystem(gui, scene, renderer, camera) {
     const solarSystemFolder = gui.addFolder( 'Solar System' );
 
-    solarSystemFolder.add( solarSystemControls, 'rotateX', -180, 180, 1 ).onChange(v => {
-        solarSystemControls.rotateX = Number(v)
-        solarSystem.rotation.x = solarSystemControls.rotateX * (Math.PI / 180);
+    solarSystemFolder.add( solarSystemProperties, 'rotateX', -180, 180, 1 ).onChange(v => {
+        solarSystemProperties.rotateX = Number(v)
+        solarSystem.rotation.x = solarSystemProperties.rotateX * (Math.PI / 180);
         renderer.render(scene, camera);
     });
-    solarSystemFolder.add( solarSystemControls, 'rotateY', -180, 180, 1 ).onChange(v => {
-        solarSystemControls.rotateY = Number(v)
-        solarSystem.rotation.y = solarSystemControls.rotateY * (Math.PI / 180);
+    solarSystemFolder.add( solarSystemProperties, 'rotateY', -180, 180, 1 ).onChange(v => {
+        solarSystemProperties.rotateY = Number(v)
+        solarSystem.rotation.y = solarSystemProperties.rotateY * (Math.PI / 180);
         renderer.render(scene, camera);
     });
-    solarSystemFolder.add( solarSystemControls, 'rotateZ', -180, 180, 1 ).onChange(v => {
-        solarSystemControls.rotateZ = Number(v)
-        solarSystem.rotation.z = solarSystemControls.rotateZ * (Math.PI / 180);
+    solarSystemFolder.add( solarSystemProperties, 'rotateZ', -180, 180, 1 ).onChange(v => {
+        solarSystemProperties.rotateZ = Number(v)
+        solarSystem.rotation.z = solarSystemProperties.rotateZ * (Math.PI / 180);
         renderer.render(scene, camera);
     });
-    solarSystemFolder.add( solarSystemControls, 'showEquatorialGrid' ).onChange(v => {
-        solarSystemControls.showEquatorialGrid = v
+    solarSystemFolder.add( solarSystemProperties, 'showEquatorialGrid' ).onChange(v => {
+        solarSystemProperties.showEquatorialGrid = v
     
         if (v === true) {
             solarSystem.add( polarGrid );
@@ -68,9 +67,9 @@ const sunLight = new THREE.PointLight(0xffffff, 100, 1000);
 sunLight.position.set(0, 0, 0);
 
 // apply the axial tilt to the entire solarsystem
-solarSystem.rotation.x = solarSystemControls.rotateX * (Math.PI / 180);
-solarSystem.rotation.y = solarSystemControls.rotateY * (Math.PI / 180);
-solarSystem.rotation.z = solarSystemControls.rotateZ * (Math.PI / 180);
+solarSystem.rotation.x = solarSystemProperties.rotateX * (Math.PI / 180);
+solarSystem.rotation.y = solarSystemProperties.rotateY * (Math.PI / 180);
+solarSystem.rotation.z = solarSystemProperties.rotateZ * (Math.PI / 180);
 
 
 solarSystem.add(star);
@@ -79,4 +78,4 @@ solarSystem.add(poleLine);
 solarSystem.add(sunLight);
 
 // solar system grid
-solarSystemControls.showEquatorialGrid ? solarSystem.add(polarGrid): null;
+solarSystemProperties.showEquatorialGrid ? solarSystem.add(polarGrid): null;
