@@ -350,14 +350,18 @@ function pushToFixedArray(item, array, maxLength) {
     }
 }
 
-document.addEventListener('click', handleClick)
+document.addEventListener('keydown', launchShip)
 
 let updateShipPosition = false
 
 
 
 
-function handleClick() {
+function launchShip(event) {
+    if (event.key !== ' ' && event.code !== 'Space') {
+        return
+    }
+
     updateShipPosition = !updateShipPosition
 
     if (updateShipPosition) {
@@ -382,7 +386,12 @@ function handleClick() {
         //solarSystem.add(line);
         solarSystem.add(shipTrailLine)
 
+    } else {
+        solarSystem.remove(shipObject);
+        solarSystem.remove(line);
+        solarSystem.remove(shipTrailLine)
     }
+
     start = new THREE.Vector3(p2pPos[0], p2pPos[1], p2pPos[2])
     end = new THREE.Vector3(p2pPos[3], p2pPos[4], p2pPos[5])    
 }
