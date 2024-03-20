@@ -8,11 +8,6 @@ export function drawPlanetToPlanetLine(planet1, planet2) {
     p2pPos[4] = planet2.Y
     p2pPos[5] = planet2.Z
     shipLineGeometry.attributes.position.needsUpdate = true;
-
-
-
-    //console.log(start.distanceTo(end))
-
 }
 
 const shipLineMaterial = new THREE.LineBasicMaterial({
