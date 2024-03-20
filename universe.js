@@ -1,17 +1,25 @@
+/**
+ * The Universe
+ * 
+ * Oh if all universes were this simple =)
+ * 
+ */
+
 import { universeGrid } from "./universeGrid";
 
-export const universeControls = {
-    showGrid: true
+export const universeProperties = {
+    showGrid: true,
+    G: 6.67430e-11 // Gravitational constant
 }
 
 export function initUniverse(gui, scene, renderer, camera) {
 
-    universeControls.showGrid ? scene.add(universeGrid): null;
+    universeProperties.showGrid ? scene.add(universeGrid): null;
 
     const universeFolder = gui.addFolder( 'Universe' );
 
-    universeFolder.add(universeControls, 'showGrid').onChange(v => {
-        universeControls.showGrid = v
+    universeFolder.add(universeProperties, 'showGrid').onChange(v => {
+        universeProperties.showGrid = v
     
         if (v === true) {
             scene.add( universeGrid );
@@ -19,6 +27,11 @@ export function initUniverse(gui, scene, renderer, camera) {
             scene.remove( universeGrid );
         }
     
+        renderer.render(scene, camera);
+    })
+
+    universeFolder.add(universeProperties, 'G').onChange(v => {
+        universeProperties.G = v
         renderer.render(scene, camera);
     })
 }
