@@ -5,6 +5,7 @@ import GUI from 'lil-gui';
 import { initUniverse, universeProperties } from "./universe";
 import { initSolarSystem, solarSystem} from "./solarsystem";
 import { drawPlanetToPlanetLine, shipLine, p2pPos } from "./drawPlanetToPlanetLine";
+import shiftNPush from "./shiftNPush";
 
 
 const gui = new GUI();
@@ -80,7 +81,7 @@ As positions for the line points are added the the array, the animate function d
 Until the maxPoints1 number is reached, at which point we have drawn the entire path of the planet and no more points are added the the geometry
  
  */
-const maxPoints1 = 500; // Maximum number of points in the orbit path, the path being draw in to short, increase this number
+const maxPoints1 = 100; // Maximum number of points in the orbit path, the path being draw in to short, increase this number
 const orbitGeometry1 = new THREE.BufferGeometry(); // contains the positions used for drawing the line
 const positions1 = new Float32Array(maxPoints1 * 3); // Each point requires x, y, z coordinates
 orbitGeometry1.setAttribute("position", new THREE.BufferAttribute(positions1, 3));
@@ -161,10 +162,6 @@ const shipTrailLine = new THREE.Line(shipTrailGeo, shipTrailMaterial);
 
 
 
-
-
-
-
 function updatePlanetPositions(deltaTime) {
 
     planets.forEach((p, i) => {
@@ -222,9 +219,10 @@ function drawOrbitalPaths() {
         pointIndex1++;
         orbitGeometry1.setDrawRange(0, pointIndex1); 
     } else {
-        pushToFixedArray(planet1Mesh.position.x, positions1, maxPoints1 * 3)
-        pushToFixedArray(planet1Mesh.position.y, positions1, maxPoints1 * 3)
-        pushToFixedArray(planet1Mesh.position.z, positions1, maxPoints1 * 3)
+        shiftNPush(planet1Mesh.position.x, positions1, maxPoints1 * 3)
+        shiftNPush(planet1Mesh.position.y, positions1, maxPoints1 * 3)
+        shiftNPush(planet1Mesh.position.z, positions1, maxPoints1 * 3)
+
         orbitGeometry1.attributes.position.needsUpdate = true;
         orbitGeometry1.setDrawRange(0, maxPoints1); // Only draw the part of the geometry that has been updated        
     }
@@ -239,9 +237,9 @@ function drawOrbitalPaths() {
         pointIndex2++;
         orbitGeometry2.setDrawRange(0, pointIndex2); // Only draw the part of the geometry that has been updated
     } else {
-        pushToFixedArray(planet2Mesh.position.x, positions2, maxPoints2 * 3)
-        pushToFixedArray(planet2Mesh.position.y, positions2, maxPoints2 * 3)
-        pushToFixedArray(planet2Mesh.position.z, positions2, maxPoints2 * 3)
+        shiftNPush(planet2Mesh.position.x, positions2, maxPoints2 * 3)
+        shiftNPush(planet2Mesh.position.y, positions2, maxPoints2 * 3)
+        shiftNPush(planet2Mesh.position.z, positions2, maxPoints2 * 3)
         orbitGeometry2.attributes.position.needsUpdate = true;
         orbitGeometry2.setDrawRange(0, maxPoints2); // Only draw the part of the geometry that has been updated        
     }
@@ -255,9 +253,9 @@ function drawOrbitalPaths() {
         shipTrailPointIndex++;
         shipTrailGeo.setDrawRange(1, shipTrailPointIndex -1); // Only draw the part of the geometry that has been updated
     } else {
-        pushToFixedArray(shipObject.position.x, shipTrailPositions, shipTrailMaxPoints * 3)
-        pushToFixedArray(shipObject.position.y, shipTrailPositions, shipTrailMaxPoints * 3)
-        pushToFixedArray(shipObject.position.z, shipTrailPositions, shipTrailMaxPoints * 3)
+        shiftNPush(shipObject.position.x, shipTrailPositions, shipTrailMaxPoints * 3)
+        shiftNPush(shipObject.position.y, shipTrailPositions, shipTrailMaxPoints * 3)
+        shiftNPush(shipObject.position.z, shipTrailPositions, shipTrailMaxPoints * 3)
         shipTrailGeo.attributes.position.needsUpdate = true;
         shipTrailGeo.setDrawRange(0, shipTrailMaxPoints); // Only draw the part of the geometry that has been updated        
     }
@@ -336,19 +334,6 @@ const center2 = planet2Mesh.geometry.boundingSphere.center.clone().add(planet2Me
 
 animate();
 
-function pushToFixedArray(item, array, maxLength) {
-    if (array.length >= maxLength) {
-        // Shift all elements to the left if the array has reached its max length
-        for (let i = 1; i < maxLength; i++) {
-            array[i - 1] = array[i];
-        }
-        // Replace the last element with the new item
-        array[maxLength - 1] = item;
-    } else {
-        // If the array hasn't reached its max length yet, simply push the item
-        array.push(item);
-    }
-}
 
 document.addEventListener('keydown', launchShip)
 
