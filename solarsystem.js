@@ -1,13 +1,14 @@
 import * as THREE from "three";
 import { createPolarGrid } from "./polarGrid";
 
-const solarSystemProperties = {
+export const solarSystemProperties = {
     rotateX: 10,
     rotateY: 10,
     rotateZ: 10,
     showEquatorialGrid: false,
     showPole: false,
-    poleLength: 25
+    poleLength: 25,
+    sunMass: 10000000
 }
 
 export const solarSystem = new THREE.Group();

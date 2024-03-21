@@ -6,8 +6,9 @@ import { initUniverse, universeProperties } from "./universe";
 import { initSolarSystem, solarSystem} from "./solarsystem";
 import { drawPlanetToPlanetLine, shipLine, p2pPos } from "./drawPlanetToPlanetLine";
 import shiftNPush from "./shiftNPush";
+import {solarSystemProperties} from './solarsystem'
 
-
+// GUI
 const gui = new GUI();
 const guiDomElement = gui.domElement;
 guiDomElement.style.position = 'absolute';
@@ -15,17 +16,13 @@ guiDomElement.style.top = '0px';
 guiDomElement.style.left = '0px';
 guiDomElement.style.removeProperty('right');
 
-
-// Scene setup
+// Scene 
 const scene = new THREE.Scene();
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-
-/*
-    CAMERA
-*/
+// Camera
 const camera = new THREE.PerspectiveCamera(
     75,
     window.innerWidth / window.innerHeight,
@@ -35,13 +32,15 @@ const camera = new THREE.PerspectiveCamera(
 camera.position.x = 10;
 camera.position.y = 25;
 camera.position.z = 30
+
+// Controls
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 0, 0); // Set the look at point to the center of the star
 controls.enableZoom = true;
 controls.zoomSpeed = 1.0;
 controls.update(); // Must be called after any manual changes to the camera's transform
   
-
+// init assets & gui elements
 initUniverse(gui, scene, renderer, camera)
 initSolarSystem(gui, scene, renderer, camera)
 
@@ -166,8 +165,10 @@ function updatePlanetPositions(deltaTime) {
 
     planets.forEach((p, i) => {
 
-        // Standard Gravitational parameter (mu)
-        const mu = universeProperties.G * p.mass
+        // Standard Gravitational parameter 
+        // We only need the mass of the central body
+        // The mass of the satellite is negligable in comparison to the mass of the central body
+        const mu = universeProperties.G * solarSystemProperties.sunMass // mass of the central body (eg satellite orbiting a moon)
 
         // Calculate the mean motion (n) - the rate at which the mean anomaly increases
         planets[i].n = Math.sqrt(mu / Math.pow(p.a, 3));
