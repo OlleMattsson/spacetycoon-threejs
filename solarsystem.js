@@ -2,13 +2,13 @@ import * as THREE from "three";
 import { createPolarGrid } from "./polarGrid";
 
 export const solarSystemProperties = {
-    rotateX: 10,
-    rotateY: 10,
-    rotateZ: 10,
+    rotateX: 0,
+    rotateY: 0,
+    rotateZ: 0,
     showEquatorialGrid: false,
-    showPole: false,
+    showPole: true,
     poleLength: 25,
-    sunMass: 10000000
+    sunMass: 1000000
 }
 
 export const solarSystem = new THREE.Group();
@@ -18,7 +18,7 @@ const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
 
 
 export function initSolarSystem(gui, scene, renderer, camera) {
-    const solarSystemFolder = gui.addFolder( 'Solar System' );
+    const solarSystemFolder = gui.addFolder( 'Solar System' ).close();
 
     solarSystemFolder.add( solarSystemProperties, 'rotateX', -180, 180, 1 ).onChange(v => {
         solarSystemProperties.rotateX = Number(v)

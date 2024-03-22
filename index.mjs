@@ -6,7 +6,8 @@ import { initUniverse, universeProperties } from "./universe";
 import { initSolarSystem, solarSystem} from "./solarsystem";
 import { drawPlanetToPlanetLine, shipLine, p2pPos } from "./drawPlanetToPlanetLine";
 import shiftNPush from "./shiftNPush";
-import {solarSystemProperties} from './solarsystem'
+import { updatePlanetPositions } from "./updatePlanetPositions";
+import { Planet } from "./planet";
 
 // GUI
 const gui = new GUI();
@@ -15,6 +16,9 @@ guiDomElement.style.position = 'absolute';
 guiDomElement.style.top = '0px';
 guiDomElement.style.left = '0px';
 guiDomElement.style.removeProperty('right');
+
+const planetsFolder = gui.addFolder("Planets")//.close()
+planetsFolder.add({addPlanet: () => addPlanetHandler()}, "addPlanet").name("Add Planet")
 
 // Scene 
 const scene = new THREE.Scene();
@@ -44,90 +48,33 @@ controls.update(); // Must be called after any manual changes to the camera's tr
 initUniverse(gui, scene, renderer, camera)
 initSolarSystem(gui, scene, renderer, camera)
 
-/**
-    PLANET 1
-*/
 
-// orbital elements
-const planet1 = {
-    mass: 1000000,
-    a: 10, // Semi-major axis in meters 
-    e: 0.3, // eccentricity
-    i: 0, // inclination in degrees
-    omega: 1 * Math.PI / 180, // Longitude of the Ascending Node in radians
-    w: 0.5 * Math.PI / 180, // Argument of Periapsis in radians
-    M: 0.5 * Math.PI / 180, // Mean Anomaly in radians,       
+const dynPlanets = []
+
+
+function addPlanetHandler() {
+
+    const newPlanet = new Planet({})
+
+    newPlanet.initPlanetUI(planetsFolder, scene, camera, renderer)
+
+
+    dynPlanets.push(newPlanet)
+    solarSystem.add(newPlanet.planetMesh)
+    solarSystem.add(newPlanet.trailLine)
+
+
 }
 
-// planet mesh
-const planet1Geometry = new THREE.SphereGeometry(1, 32, 32);
-const planet1Material = new THREE.MeshLambertMaterial({ color: 0x0000ff });
-const planet1Mesh = new THREE.Mesh(planet1Geometry, planet1Material);    
-
-// orbit path line
-const orbitMaterial1 = new THREE.LineBasicMaterial({
-  color: 0xffffff, // Change the color as needed
-});
-
-
-/**
- 
-The orbit path is a line consisting of points that have XYZ positions.
-The points are stored in the array positions1
-The XYZ positions are determined by the planet's position during animation function
-Ie. on each frame, a position is added to the positions array
-As positions for the line points are added the the array, the animate function draws ut a longer and longer line behind the planet
-Until the maxPoints1 number is reached, at which point we have drawn the entire path of the planet and no more points are added the the geometry
- 
- */
-const maxPoints1 = 100; // Maximum number of points in the orbit path, the path being draw in to short, increase this number
-const orbitGeometry1 = new THREE.BufferGeometry(); // contains the positions used for drawing the line
-const positions1 = new Float32Array(maxPoints1 * 3); // Each point requires x, y, z coordinates
-orbitGeometry1.setAttribute("position", new THREE.BufferAttribute(positions1, 3));
-let pointIndex1 = 0; // Keep track of the last point added to the orbit path
-const orbitLine1 = new THREE.Line(orbitGeometry1, orbitMaterial1); // orbitLine is eventually placed in the scene
-
-
-/**
-    PLANET 2
- */
-const planet2 = {
-    mass: 1000000,
-    a: 20, // Semi-major axis in meters 
-    e: 0.5, // eccentricity
-    i: 20, // inclination in degrees
-    omega: 0 * Math.PI / 180, // Longitude of the Ascending Node in radians
-    w: 0 * Math.PI / 180, // Argument of Periapsis in radians
-    M: 0 * Math.PI / 180, // Mean Anomaly in radians       
-}
-
-const planet2Geometry = new THREE.SphereGeometry(1, 32, 32);
-const planet2Material = new THREE.MeshLambertMaterial({ color: 0xdb5f00 });
-const planet2Mesh = new THREE.Mesh(planet2Geometry, planet2Material);    
-
-// orbit path line
-const orbitMaterial2 = new THREE.LineBasicMaterial({
-    color: 0xffffff, // Change the color as needed
-});
-
-const orbitGeometry2 = new THREE.BufferGeometry();
-const maxPoints2 = 1000; // adjust length of orbital path trail
-const positions2 = new Float32Array(maxPoints2 * 3); // Each point requires x, y, z coordinates
-orbitGeometry2.setAttribute("position", new THREE.BufferAttribute(positions2, 3));
-let pointIndex2 = 0; // Keep track of the last point added to the orbit path
-const orbitLine2 = new THREE.Line(orbitGeometry2, orbitMaterial2);
-  
+// 
 
 
 
 
+dynPlanets.forEach(p => {
+    solarSystem.add(p)
+})
     
-const planets = [planet1, planet2]
-solarSystem.add(planet1Mesh);
-solarSystem.add(planet2Mesh);
-solarSystem.add(orbitLine1);
-solarSystem.add(orbitLine2);
-//solarSystem.add(shipLine);
 scene.add(solarSystem);
 
 
@@ -161,91 +108,12 @@ const shipTrailLine = new THREE.Line(shipTrailGeo, shipTrailMaterial);
 
 
 
-function updatePlanetPositions(deltaTime) {
 
-    planets.forEach((p, i) => {
-
-        // Standard Gravitational parameter 
-        // We only need the mass of the central body
-        // The mass of the satellite is negligable in comparison to the mass of the central body
-        const mu = universeProperties.G * solarSystemProperties.sunMass // mass of the central body (eg satellite orbiting a moon)
-
-        // Calculate the mean motion (n) - the rate at which the mean anomaly increases
-        planets[i].n = Math.sqrt(mu / Math.pow(p.a, 3));
-
-        // update mean anomaly
-        p.M += p.n * deltaTime; 
-
-        // Simplified conversion from mean anomaly to true anomaly (ν)
-        // This is a very rough approximation for small eccentricities
-        let E = p.M + p.e * Math.sin(p.M); // Eccentric anomaly, approximate
-        let nu = 2 * Math.atan2(Math.sqrt(1 + p.e) * Math.sin(E / 2), Math.sqrt(1 - p.e) * Math.cos(E / 2)); // True anomaly, approximate
-
-        // Calculate position in the orbit plane
-        let r = p.a * (1 - p.e * Math.cos(E)); // Distance from the central body
-        let x = r * Math.cos(nu);
-        let y = r * Math.sin(nu);
-
-        // convert inclination degrees to radians, 
-        // subtracting 90 so that inclination of 0 degrees is an orbit around the equator
-        const _i = (p.i - 90) * Math.PI / 180
-
-        // Convert to 3D coordinates
-        p.X = x * (Math.cos(p.omega) * Math.cos(p.omega) - Math.sin(p.omega) * Math.sin(p.w) * Math.cos(_i)) + 
-                y * (-Math.cos(p.omega) * Math.sin(p.w) - Math.sin(p.omega) * Math.cos(p.w) * Math.cos(_i));
-
-        p.Y = x * (Math.sin(p.omega) * Math.cos(p.w) + Math.cos(p.omega) * Math.sin(p.w) * Math.cos(_i)) + 
-                y * (-Math.sin(p.omega) * Math.sin(p.w) + Math.cos(p.omega) * Math.cos(p.w) * Math.cos(_i));
-
-        p.Z = x * (Math.sin(p.w) * Math.sin(_i)) + y * (Math.cos(p.w) * Math.sin(_i));
-    })
-
-
-    planet1Mesh.position.set(planets[0].X, planets[0].Y, planets[0].Z);
-    planet2Mesh.position.set(planets[1].X, planets[1].Y, planets[1].Z);
-
-
-
-}
 
 // store positions of planets as XYZ points and use that to update a Line geometry
 function drawOrbitalPaths() {
-    // planet 1
-
-    if (pointIndex1 < maxPoints1) { // store position if there is still space in the array
-        positions1[pointIndex1 * 3] = planets[0].X;       // store the position of the planet
-        positions1[pointIndex1 * 3 + 1] = planet1Mesh.position.y;
-        positions1[pointIndex1 * 3 + 2] = planet1Mesh.position.z;
-        orbitGeometry1.attributes.position.needsUpdate = true; // Important, indicates the geometry needs to be re-rendered
-        pointIndex1++;
-        orbitGeometry1.setDrawRange(0, pointIndex1); 
-    } else {
-        shiftNPush(planet1Mesh.position.x, positions1, maxPoints1 * 3)
-        shiftNPush(planet1Mesh.position.y, positions1, maxPoints1 * 3)
-        shiftNPush(planet1Mesh.position.z, positions1, maxPoints1 * 3)
-
-        orbitGeometry1.attributes.position.needsUpdate = true;
-        orbitGeometry1.setDrawRange(0, maxPoints1); // Only draw the part of the geometry that has been updated        
-    }
-    
-     
-    // planet 2
-    if (pointIndex2 < maxPoints2) {
-        positions2[pointIndex2 * 3] = planet2Mesh.position.x;
-        positions2[pointIndex2 * 3 + 1] = planet2Mesh.position.y;
-        positions2[pointIndex2 * 3 + 2] = planet2Mesh.position.z;
-        orbitGeometry2.attributes.position.needsUpdate = true; // Important, indicates the geometry needs to be re-rendered
-        pointIndex2++;
-        orbitGeometry2.setDrawRange(0, pointIndex2); // Only draw the part of the geometry that has been updated
-    } else {
-        shiftNPush(planet2Mesh.position.x, positions2, maxPoints2 * 3)
-        shiftNPush(planet2Mesh.position.y, positions2, maxPoints2 * 3)
-        shiftNPush(planet2Mesh.position.z, positions2, maxPoints2 * 3)
-        orbitGeometry2.attributes.position.needsUpdate = true;
-        orbitGeometry2.setDrawRange(0, maxPoints2); // Only draw the part of the geometry that has been updated        
-    }
-
-    // ship
+   
+   // ship
     if (shipTrailPointIndex < shipTrailMaxPoints) {
         shipTrailPositions[shipTrailPointIndex * 3] = shipObject.position.x;
         shipTrailPositions[shipTrailPointIndex * 3 + 1] = shipObject.position.y;
@@ -276,10 +144,23 @@ function animate(time = 0) {    // default to 0, otherwise time is undefined on 
     pT = time;                  // Update lastTime for the next frame  
     elapsedTime += dT;
 
-    updatePlanetPositions(dT)
-    drawOrbitalPaths() 
-    drawPlanetToPlanetLine(planets[0], planets[1])
+    //updatePlanetPositions(dT, planets)
+    //drawOrbitalPaths() 
+    //drawPlanetToPlanetLine(planets[0], planets[1])
 
+    //planet2Mesh.position.set(planets[0].X, planets[0].Y, planets[0].Z);
+
+    
+    dynPlanets.forEach((p) => {
+        //console.log(p.getProperties())
+
+        p.updatePlanetPosition(dT)
+        p.drawPlanetTrail()
+
+    })
+
+// THIS IS ALL ABOUT COLLISION DETECTION
+/*
     planet2Mesh.geometry.computeBoundingSphere();
     shipObject.geometry.computeBoundingSphere();
 
@@ -309,11 +190,11 @@ function animate(time = 0) {    // default to 0, otherwise time is undefined on 
         // Update object position
         shipObject.position.lerpVectors(start, end, journeyFraction);   
         
-// Update the boundingSphere centers based on current world positions
-const center1 = shipObject.geometry.boundingSphere.center.clone().add(shipObject.position);
-const center2 = planet2Mesh.geometry.boundingSphere.center.clone().add(planet2Mesh.position);
-        
-        //const distance2 = planet2Mesh.geometry.boundingSphere.center.distanceTo(shipObject.geometry.boundingSphere.center);
+        // Update the boundingSphere centers based on current world positions
+        const center1 = shipObject.geometry.boundingSphere.center.clone().add(shipObject.position);
+        const center2 = planet2Mesh.geometry.boundingSphere.center.clone().add(planet2Mesh.position);
+                
+                //const distance2 = planet2Mesh.geometry.boundingSphere.center.distanceTo(shipObject.geometry.boundingSphere.center);
         const distance2 = center1.distanceTo(center2);
         //console.log(center1, center2, distance2)
 
@@ -328,7 +209,7 @@ const center2 = planet2Mesh.geometry.boundingSphere.center.clone().add(planet2Me
         }
 
     }
-
+*/
         controls.update();
         renderer.render(scene, camera);
     }

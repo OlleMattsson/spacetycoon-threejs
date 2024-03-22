@@ -8,17 +8,18 @@
 import { universeGrid } from "./universeGrid";
 
 export const universeProperties = {
-    showGrid: false,
-    G: 6.67430e-11 // Gravitational constant
+    showGrid: true,
+    //G: 6.67430e-11 // Gravitational constant
+    G: 6.67430e-7 // increasing G is a hacky way to speed up all planetary motion
 }
 
 export function initUniverse(gui, scene, renderer, camera) {
 
     universeProperties.showGrid ? scene.add(universeGrid): null;
 
-    const universeFolder = gui.addFolder( 'Universe' );
+    const universeFolder = gui.addFolder( 'Universe' ).close();
 
-    universeFolder.add(universeProperties, 'showGrid').onChange(v => {
+    universeFolder.add(universeProperties, 'showGrid').name("Show Grid").onChange(v => {
         universeProperties.showGrid = v
     
         if (v === true) {
@@ -30,7 +31,7 @@ export function initUniverse(gui, scene, renderer, camera) {
         renderer.render(scene, camera);
     })
 
-    universeFolder.add(universeProperties, 'G').onChange(v => {
+    universeFolder.add(universeProperties, 'G').name("Gravitational constant G").onChange(v => {
         universeProperties.G = v
         renderer.render(scene, camera);
     })
