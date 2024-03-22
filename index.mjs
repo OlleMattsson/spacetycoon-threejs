@@ -1,13 +1,12 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import GUI from 'lil-gui';
-
-import { initUniverse, universeProperties } from "./universe";
+import { initUniverse } from "./universe";
 import { initSolarSystem, solarSystem} from "./solarsystem";
-import { drawPlanetToPlanetLine, shipLine, p2pPos } from "./drawPlanetToPlanetLine";
+import { p2pPos } from "./drawPlanetToPlanetLine";
 import shiftNPush from "./shiftNPush";
-import { updatePlanetPositions } from "./updatePlanetPositions";
 import { Planet } from "./planet";
+import { createStarField } from "./starfield";
 
 // GUI
 const gui = new GUI();
@@ -16,7 +15,6 @@ guiDomElement.style.position = 'absolute';
 guiDomElement.style.top = '0px';
 guiDomElement.style.left = '0px';
 guiDomElement.style.removeProperty('right');
-
 const planetsFolder = gui.addFolder("Planets")//.close()
 planetsFolder.add({addPlanet: () => addPlanetHandler()}, "addPlanet").name("Add Planet")
 
@@ -48,14 +46,15 @@ controls.update(); // Must be called after any manual changes to the camera's tr
 initUniverse(gui, scene, renderer, camera)
 initSolarSystem(gui, scene, renderer, camera)
 
-
+// add planet assets 
 const dynPlanets = []
+const planet1 = new Planet({a: 8, i:0, e: 0, omega: 0, w: 0})
+const planet2 = new Planet({a: 12, i:-3, e: 0.1, omega: 180, w: 0, trailColor: 0xff000})
+const planet3 = new Planet({a: 16, i:4, e: 0.2, omega: 270})
+const planet4 = new Planet({a: 20, i:1, e: 0.2, omega: 45})
+const planet5 = new Planet({a: 25, i:20, e: 0.1, omega: 90, w: 90})
 
-const planet1 = new Planet({a: 10, i:0, e: 0.4, omega: 0, w: 0})
-const planet2 = new Planet({a: 15, i:0, e: 0.4, omega: 0, w: 0, trailColor: 0xff000})
-//const planet3 = new Planet({a: 20, e: 0.3})
-
-dynPlanets.push(planet1, planet2)
+dynPlanets.push(planet1, planet2, planet3, planet4, planet5)
 
 dynPlanets.forEach(p => {
     p.initPlanetUI(planetsFolder, scene, camera, renderer)
@@ -64,21 +63,21 @@ dynPlanets.forEach(p => {
 })
 
 function addPlanetHandler() {
-
     const newPlanet = new Planet({})
-
     newPlanet.initPlanetUI(planetsFolder, scene, camera, renderer)
-
-
     dynPlanets.push(newPlanet)
     solarSystem.add(newPlanet.planetMesh)
     solarSystem.add(newPlanet.trailLine)
-
-
 }
-
   
 scene.add(solarSystem);
+
+
+// Create 10000 stars within a spread of 2000 units
+const stars = createStarField(4500, 2000, 300);
+
+// Add the star field to the scene
+scene.add(stars);
 
 
 // placeholder ship object

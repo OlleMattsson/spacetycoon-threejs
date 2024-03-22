@@ -88,7 +88,7 @@ poleGeometry.setFromPoints(polePoints);
 const poleLine = new THREE.Line(poleGeometry, poleMaterial);
 
 // Sunlight
-const sunLight = new THREE.PointLight(0xffffff, 100, 1000);
+const sunLight = new THREE.PointLight(0xffffff, 100, 100);
 sunLight.position.set(0, 0, 0);
 
 // apply rotation
