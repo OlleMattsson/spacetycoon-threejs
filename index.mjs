@@ -51,8 +51,8 @@ initSolarSystem(gui, scene, renderer, camera)
 
 const dynPlanets = []
 
-const planet1 = new Planet({a: 10, i:45, e: 0.4, omega: 0, w: 0})
-const planet2 = new Planet({a: 10, i:45, e: 0.4, omega: 0, w: 0, trailColor: 0xff000})
+const planet1 = new Planet({a: 10, i:0, e: 0.4, omega: 0, w: 0})
+const planet2 = new Planet({a: 15, i:0, e: 0.4, omega: 0, w: 0, trailColor: 0xff000})
 //const planet3 = new Planet({a: 20, e: 0.3})
 
 dynPlanets.push(planet1, planet2)

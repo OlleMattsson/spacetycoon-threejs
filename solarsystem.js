@@ -22,7 +22,7 @@ export function initSolarSystem(gui, scene, renderer, camera) {
 
     solarSystemFolder.add( solarSystemProperties, 'rotateX', -180, 180, 1 ).onChange(v => {
         solarSystemProperties.rotateX = Number(v)
-        solarSystem.rotation.x = solarSystemProperties.rotateX * (Math.PI / 180);
+        solarSystem.rotation.x = (solarSystemProperties.rotateX -90)* (Math.PI / 180);
         renderer.render(scene, camera);
     });
 
@@ -64,10 +64,9 @@ export function initSolarSystem(gui, scene, renderer, camera) {
 
     solarSystemFolder.add( solarSystemProperties, 'poleLength', 0, 50, 1 ).onChange(v => {
         solarSystemProperties.poleLength = Number(v)
-        console.log(solarSystemProperties.poleLength)
         polePoints = []
-        polePoints.push(new THREE.Vector3(0, -(solarSystemProperties.poleLength / 2), 0));
-        polePoints.push(new THREE.Vector3(0, (solarSystemProperties.poleLength / 2), 0));
+        polePoints.push(new THREE.Vector3(0,0,-(solarSystemProperties.poleLength / 2)));
+        polePoints.push(new THREE.Vector3(0,0,(solarSystemProperties.poleLength / 2))); 
         poleGeometry.setFromPoints(polePoints);        
         renderer.render(scene, camera);
     });    
@@ -83,8 +82,8 @@ const poleLength = 40 // =)
 const poleGeometry = new THREE.BufferGeometry();
 const poleMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 }); 
 let polePoints = [];
-polePoints.push(new THREE.Vector3(0, -(solarSystemProperties.poleLength / 2), 0));
-polePoints.push(new THREE.Vector3(0, (solarSystemProperties.poleLength / 2), 0)); 
+polePoints.push(new THREE.Vector3(0,0,-(solarSystemProperties.poleLength / 2)));
+polePoints.push(new THREE.Vector3(0,0,(solarSystemProperties.poleLength / 2))); 
 poleGeometry.setFromPoints(polePoints);
 const poleLine = new THREE.Line(poleGeometry, poleMaterial);
 
@@ -93,7 +92,8 @@ const sunLight = new THREE.PointLight(0xffffff, 100, 1000);
 sunLight.position.set(0, 0, 0);
 
 // apply rotation
-solarSystem.rotation.x = solarSystemProperties.rotateX * (Math.PI / 180);
+// rotate X axis an extra -90 degrees so that 0 rotation corresponds to the sun standing upright
+solarSystem.rotation.x = (solarSystemProperties.rotateX -90) * (Math.PI / 180);
 solarSystem.rotation.y = solarSystemProperties.rotateY * (Math.PI / 180);
 solarSystem.rotation.z = solarSystemProperties.rotateZ * (Math.PI / 180);
 
