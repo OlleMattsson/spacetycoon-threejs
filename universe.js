@@ -9,8 +9,8 @@ import { universeGrid } from "./universeGrid";
 
 export const universeProperties = {
     showGrid: true,
-    //G: 6.67430e-11 // Gravitational constant
-    G: 6.67430e-7 // increasing G is a hacky way to speed up all planetary motion
+    G: 6.67430e-11 // Gravitational constant
+    //G: 6.67430e-7 // increasing G is a hacky way to speed up all planetary motion
 }
 
 export function initUniverse(gui, scene, renderer, camera) {

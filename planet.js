@@ -40,7 +40,7 @@ export class Planet {
         M = 0, 
         planetColor = 0xffffff, 
         trailColor = 0xffffff,
-        trailLength = 50, 
+        trailLength = 500, 
     }){
         this.mass = mass
         this.a = a
@@ -51,21 +51,16 @@ export class Planet {
         this.M = M * Math.PI / 180
         this.planetColor = planetColor
         this.trailColor = trailColor
-        this.trailLength = trailLength;
+        //this.trailLength = trailLength;
 
         this.properties = {
             i, // inclination in degrees
             a, // Semi-major axis in meters 
             e, // eccentricity 0 = circular, 0 < e < 1 =  elliptic, 1 = parabolic, e > 1 hyperbolic
             M, // Mean Anomaly in radians, 
-
-            // mucking around with these values imho produce the incorrect outcome
-
-            // omega seems to in fact affect the argument of periapses
             omega, // Longitude of the Ascending Node in degrees
-
-            // increasing w seems to make the orbit more eccentric
             w,  // Argument of Periapsis in degrees
+            trailLength
         }
 
         // planet mesh
@@ -77,7 +72,7 @@ export class Planet {
         this.trailGeometry = new THREE.BufferGeometry();        
         this.trailMaterial = new THREE.LineBasicMaterial({ color: this.trailColor });
         this.trailLine = new THREE.Line(this.trailGeometry, this.trailMaterial);
-        this.trailPositions = new Float32Array(this.trailLength * 3); // Each point requires x, y, z coordinates
+        this.trailPositions = new Float32Array(this.properties.trailLength * 3); // Each point requires x, y, z coordinates
         this.pointIndex = 0; // Keep track of the last point added to the orbit path
         this.trailGeometry.setAttribute("position", new THREE.BufferAttribute(this.trailPositions, 3));
         
@@ -118,11 +113,21 @@ export class Planet {
                 this.properties.w = v
                 renderer.render(scene, camera)
             })
+        planetFolder.add(properties, "trailLength", 0, 1000, 100)
+            .name("Trail Length")
+            .onChange(v =>{
+                this.properties.trailLength = v
+                this.trailPositions = new Float32Array(this.properties.trailLength * 3);
+                this.trailGeometry.setAttribute("position", new THREE.BufferAttribute(this.trailPositions, 3)); 
+                this.pointIndex = 0;
+                renderer.render(scene, camera)
+            })
     }
 
     drawPlanetTrail() {
 
-        const {pointIndex, planetMesh, trailLength} = this
+        const {pointIndex, planetMesh} = this
+        const {trailLength} = this.properties
 
         // draw the first points until there is space in the buffer
         if (pointIndex < trailLength) { // store position if there is still space in the array
