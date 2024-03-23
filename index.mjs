@@ -48,13 +48,24 @@ initSolarSystem(gui, scene, renderer, camera)
 
 // add planet assets 
 const dynPlanets = []
-const planet1 = new Planet({a: 8, i:0, e: 0, omega: 0, w: 0})
-const planet2 = new Planet({a: 12, i:-3, e: 0.1, omega: 180, w: 0, trailColor: 0xff000})
-const planet3 = new Planet({a: 16, i:4, e: 0.2, omega: 270})
-const planet4 = new Planet({a: 20, i:1, e: 0.2, omega: 45})
-const planet5 = new Planet({a: 25, i:20, e: 0.1, omega: 90, w: 90})
+const planet1 = new Planet({a: 20, omega: 90, trailLength: 1000, mass: 200000})
+const planet2 = new Planet({a: 30, i: 5, trailLength: 2000, mass: 1000000})
 
-dynPlanets.push(planet1, planet2, planet3, planet4, planet5)
+const moon1 = new Planet({a: 4, orbitalParent: planet1, trailLength: 0, trailColor: 0x0000ff, i: 20})
+const moon2 = new Planet({a: 3, orbitalParent: planet2, trailLength: 0, trailColor: 0x0000ff, i: 10})
+const moon3 = new Planet({a: 6, orbitalParent: planet2, trailLength: 0, trailColor: 0x0000ff, i: 10})
+const moon4 = new Planet({a: 9, orbitalParent: planet2, trailLength: 0, trailColor: 0x0000ff, i: 90})
+
+const planet1Group = new THREE.Group();
+
+planet1Group.add(moon1.planetMesh)
+planet1Group.add(planet1.planetMesh)
+
+solarSystem.add(planet1Group)
+
+
+
+dynPlanets.push(planet1, moon1, planet2, moon2, moon3, moon4)
 
 dynPlanets.forEach(p => {
     p.initPlanetUI(planetsFolder, scene, camera, renderer)

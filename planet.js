@@ -28,6 +28,7 @@ export class Planet {
     pointIndex // keep track of the
 
     properties
+    parent // parent body of orbit
 
 
     constructor({
@@ -41,6 +42,7 @@ export class Planet {
         planetColor = 0xffffff, 
         trailColor = 0xffffff,
         trailLength = 500, 
+        orbitalParent
     }){
         this.mass = mass
         this.a = a
@@ -52,6 +54,7 @@ export class Planet {
         this.planetColor = planetColor
         this.trailColor = trailColor
         //this.trailLength = trailLength;
+        this.orbitalParent = orbitalParent || null
 
         this.properties = {
             i, // inclination in degrees
@@ -185,8 +188,17 @@ export class Planet {
         // Standard Gravitational parameter 
         // We only need the mass of the central body
         // The mass of the satellite is negligable in comparison to the mass of the central body
-        const mu = universeProperties.G * solarSystemProperties.sunMass // mass of the central body (eg satellite orbiting a moon)
+        let mu
 
+        if (this.orbitalParent === null) { // parent is sun
+            mu = universeProperties.G * solarSystemProperties.sunMass // mass of the central body (eg satellite orbiting a moon)
+        } else {
+            mu = universeProperties.G * this.orbitalParent.mass
+        }
+
+
+
+        
         // Calculate the mean motion (n) - the rate at which the mean anomaly increases
         const n = Math.sqrt(mu / Math.pow(a, 3));
 
@@ -204,17 +216,6 @@ export class Planet {
         let x = r * Math.cos(nu);
         let y = r * Math.sin(nu);
 
-        /*
-        // Convert to 3D coordinates
-        const X = x * (Math.cos(_omega) * Math.cos(_omega) - Math.sin(_omega) * Math.sin(_w) * Math.cos(_i)) + 
-                y * (-Math.cos(_omega) * Math.sin(_w) - Math.sin(_omega) * Math.cos(_w) * Math.cos(_i));
-
-        const Y = x * (Math.sin(_omega) * Math.cos(_w) + Math.cos(_omega) * Math.sin(_w) * Math.cos(_i)) + 
-                y * (-Math.sin(_omega) * Math.sin(_w) + Math.cos(_omega) * Math.cos(_w) * Math.cos(_i));
-
-        const Z = x * (Math.sin(_w) * Math.sin(_i)) + y * (Math.cos(_w) * Math.sin(_i));
-*/
-
         // Apply rotation transformations
         // First, rotate by w (argument of periapsis) in the orbital plane
         let xw = x * Math.cos(_w) - y * Math.sin(_w);
@@ -230,8 +231,34 @@ export class Planet {
         let Y = xi * Math.sin(_omega) + yi * Math.cos(_omega);
         let Z = zi; // Z-coordinate after inclination applied
 
-        // set the the position of the planet mesh
-        this.planetMesh.position.set(X, Y, Z);
+        
+        
+        
+        if (this.orbitalParent === null) {
+            console.log("no parent")// parent is sun
+                        // set the the position of the planet mesh
+                        this.planetMesh.position.set(
+                            X, 
+                            Y, 
+                            Z
+                        );
+        } else {
+            console.log(this.orbitalParent)
+            const parentX = this.orbitalParent.planetMesh?.position.x || 0
+            const parentY = this.orbitalParent.planetMesh?.position.y || 0
+            const parentZ = this.orbitalParent.planetMesh?.position.z || 0
+    
+            
+    
+            // set the the position of the planet mesh
+            this.planetMesh.position.set(
+                X + parentX, 
+                Y + parentY, 
+                Z + parentZ
+            );
+        }
+        
+
 
     }
     
