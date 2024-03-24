@@ -6,7 +6,7 @@ export const solarSystemProperties = {
     rotateY: 0,
     rotateZ: 0,
     showEquatorialGrid: false,
-    showPole: true,
+    showPole: false,
     poleLength: 25,
     sunMass: 1000000
 }
@@ -18,11 +18,11 @@ const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
 
 
 export function initSolarSystem(gui, scene, renderer, camera) {
-    const solarSystemFolder = gui.addFolder( 'Solar System' ).close();
+    const solarSystemFolder = gui.addFolder( 'Solar System' );
 
     solarSystemFolder.add( solarSystemProperties, 'rotateX', -180, 180, 1 ).onChange(v => {
         solarSystemProperties.rotateX = Number(v)
-        solarSystem.rotation.x = (solarSystemProperties.rotateX -90)* (Math.PI / 180);
+        solarSystem.rotation.x = (solarSystemProperties.rotateX )* (Math.PI / 180);
         renderer.render(scene, camera);
     });
 
@@ -93,7 +93,8 @@ sunLight.position.set(0, 0, 0);
 
 // apply rotation
 // rotate X axis an extra -90 degrees so that 0 rotation corresponds to the sun standing upright
-solarSystem.rotation.x = (solarSystemProperties.rotateX -90) * (Math.PI / 180);
+// solarSystem.rotation.x = (solarSystemProperties.rotateX -90) * (Math.PI / 180);
+solarSystem.rotation.x = (solarSystemProperties.rotateX) * (Math.PI / 180);
 solarSystem.rotation.y = solarSystemProperties.rotateY * (Math.PI / 180);
 solarSystem.rotation.z = solarSystemProperties.rotateZ * (Math.PI / 180);
 

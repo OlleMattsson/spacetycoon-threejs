@@ -29,7 +29,8 @@ export function updatePlanetPositions(deltaTime, planets) {
 
         // convert inclination degrees to radians, 
         // subtracting 90 so that inclination of 0 degrees is an orbit around the equator
-        const _i = (p.i - 90) * Math.PI / 180
+        //const _i = (p.i - 90) * Math.PI / 180
+        const _i = (p.i) * Math.PI / 180
 
         // Convert to 3D coordinates
         p.X = x * (Math.cos(p.omega) * Math.cos(p.omega) - Math.sin(p.omega) * Math.sin(p.w) * Math.cos(_i)) + 

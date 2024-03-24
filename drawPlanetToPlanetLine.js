@@ -1,12 +1,14 @@
 import * as THREE from "three";
 
 export function drawPlanetToPlanetLine(planet1, planet2) {
-    p2pPos[0] = planet1.X
-    p2pPos[1] = planet1.Y
-    p2pPos[2] = planet1.Z
-    p2pPos[3] = planet2.X
-    p2pPos[4] = planet2.Y
-    p2pPos[5] = planet2.Z
+
+
+    p2pPos[0] = planet1.planetMesh.position.x
+    p2pPos[1] = planet1.planetMesh.position.y
+    p2pPos[2] = planet1.planetMesh.position.z
+    p2pPos[3] = planet2.planetMesh.position.x
+    p2pPos[4] = planet2.planetMesh.position.y
+    p2pPos[5] = planet2.planetMesh.position.z
     shipLineGeometry.attributes.position.needsUpdate = true;
 }
 
