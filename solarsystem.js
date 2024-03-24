@@ -13,7 +13,7 @@ export const solarSystemProperties = {
 
 export const solarSystem = new THREE.Group();
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.1); 
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.3); 
 
 
 
