@@ -42,7 +42,7 @@ export class Ship {
         const distance = start.distanceTo(end);
         this.travelTime = distance / this.speed
 
-
+ 
         // line that displays ship's current path
         /*
         const geometry1 = new THREE.BufferGeometry()

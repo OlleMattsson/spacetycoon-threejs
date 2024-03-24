@@ -5,15 +5,6 @@ import shiftNPush from "./shiftNPush";
 import {deg2Rad} from './helpers'
 
 export class Planet {
-    
-    // The Six Elements of Kepler's 
-    a       
-    e       
-    i       
-    omega   
-    w      
-    M       
-
     mass 
     n       // mean motion
     planetColor
@@ -27,12 +18,10 @@ export class Planet {
     trailPositions // an arry of points with coordinates: [p1x, p1y, p1z, p2x, p2y, p2z... pNx, pNy, pNz]
     trailLine
     pointIndex // keep track of the
-
     properties
     parent // parent body of orbit
-    size 
-
-
+    size
+    name
 
     constructor({
         mass = 1000, 
@@ -48,15 +37,10 @@ export class Planet {
         orbitalParent = null,
         size = 1,
         drawCone = false,
-        solarSystem = null // group
+        solarSystem = null, // group
+        name = ""
     }){
         this.mass = mass
-        this.a = a
-        this.e = e
-        this.i = i
-        this.omega = omega * Math.PI / 180
-        this.w = w * Math.PI / 180
-        this.M = M * Math.PI / 180
         this.planetColor = planetColor
         this.trailColor = trailColor
         this.orbitalParent = orbitalParent
@@ -71,13 +55,16 @@ export class Planet {
             omega, // Longitude of the Ascending Node in degrees
             w,  // Argument of Periapsis in degrees
             trailLength,
-            size
+            size,
+            name
         }
 
         // planet mesh
         this.planetGeometry = new THREE.SphereGeometry(this.properties.size, 32, 32);
         this.planetMaterial = new THREE.MeshLambertMaterial({ color: this.planetColor });
         this.planetMesh = new THREE.Mesh(this.planetGeometry, this.planetMaterial);   
+        this.planetMesh.userData.planet = this; // Store a reference to the instance
+
 
         // planet trail
         this.trailGeometry = new THREE.BufferGeometry();        
@@ -88,47 +75,23 @@ export class Planet {
         this.trailGeometry.setAttribute("position", new THREE.BufferAttribute(this.trailPositions, 3));
 
         // line to parent
-        const parentLineMaterial = new THREE.LineBasicMaterial({
-            color: 0xff00ff, 
-        });
+        const parentLineMaterial = new THREE.LineBasicMaterial({color: 0xff00ff});
         this.parentLineGeometry = new THREE.BufferGeometry()
-        
         this.orbiter2PlanetPositions = new Float32Array(2*3) // we need two points with three coordinates each
-        
-        this.parentLineGeometry.setAttribute(
-            'position', 
-            new THREE.BufferAttribute(this.orbiter2PlanetPositions, 3)
-        )
-        
+        this.parentLineGeometry.setAttribute('position', new THREE.BufferAttribute(this.orbiter2PlanetPositions, 3))
         this.parentLine = new THREE.Line(this.parentLineGeometry, parentLineMaterial)
-        
-        
-
-        // launch window cone
-        /*
-        if (this.drawCone) {
-            const coneGeometry = new THREE.ConeGeometry(
-                5,      // base radius
-                40,      // height
-                16);    // segments
-            const coneMaterial = new THREE.MeshBasicMaterial({color: 0xff0000, opacity: 0.5, transparent: true});
-            this.cone = new THREE.Mesh(coneGeometry, coneMaterial);
-        }
-        */
-
-        /*
-        if (this.solarSystem !== null) {
-            this.solarSystem.add(this.cone)
-        }
-        */
-
-
-
     }
 
     initPlanetUI(parentFolder, scene, camera, renderer) {
-        const planetFolder = parentFolder.addFolder("Planet1").close()
+        const planetFolder = parentFolder.addFolder(this.properties.name).close()
         const {properties} = this
+
+        planetFolder.add(properties, "name")
+            .name("Name")
+            .onChange(v =>{
+                this.properties.name = v
+                renderer.render(scene, camera)
+            })
 
         planetFolder.add(properties, "i", -90, 90, 1)
             .name("Inclination")
@@ -175,6 +138,7 @@ export class Planet {
                 this.properties.size = v
                 renderer.render(scene, camera)
             })
+
     }
 
     drawPlanetTrail() {
@@ -203,14 +167,12 @@ export class Planet {
     }
 
     drawLineToParent() {
-
         this.orbiter2PlanetPositions[0] = this.planetMesh.position.x
         this.orbiter2PlanetPositions[1] = this.planetMesh.position.y
         this.orbiter2PlanetPositions[2] = this.planetMesh.position.z
         this.orbiter2PlanetPositions[3] = this.orbitalParent?.planetMesh.position.x || 0
         this.orbiter2PlanetPositions[4] = this.orbitalParent?.planetMesh.position.y || 0
         this.orbiter2PlanetPositions[5] = this.orbitalParent?.planetMesh.position.z || 0
-
         this.parentLineGeometry.attributes.position.needsUpdate = true;       
     }
 
@@ -221,22 +183,7 @@ export class Planet {
             e: this.e
         }
     }
-/*
-    this.properties = {
-        i, // inclination in degrees
-        a, // Semi-major axis in meters 
-        e, // eccentricity 0 = circular, 0 < e < 1 =  elliptic, 1 = parabolic, e > 1 hyperbolic
-        M, // Mean Anomaly in radians, 
 
-        // mucking around with these values imho produce the incorrect outcome
-
-        // omega seems to in fact affect the argument of periapses
-        omega, // Longitude of the Ascending Node in degrees
-
-        // increasing w seems to make the orbit more eccentric
-        w,  // Argument of Periapsis in degrees
-    }
-*/
     updatePlanetPosition(deltaTime) {
 
         const {i, e, a, omega, w} = this.properties
@@ -257,10 +204,7 @@ export class Planet {
         } else {
             mu = universeProperties.G * this.orbitalParent.mass
         }
-
-
-
-        
+       
         // Calculate the mean motion (n) - the rate at which the mean anomaly increases
         const n = Math.sqrt(mu / Math.pow(a, 3));
 
@@ -306,54 +250,6 @@ export class Planet {
             Z + parentY,
             -(Y - parentZ), // flip sign to change direction of rotation
         );     
-       /*
-        if (this.drawCone) {
-            // Calculate the offset position for the cone by adding a small angle to the true anomaly
-            
-            let offsetAngle = deg2Rad(20); // This is an arbitrary small angle; adjust as needed
-            let nuOffset = nu + offsetAngle; // Add the offset to the true anomaly
-
-            // Recalculate r because it can change with nu for elliptical orbits
-            let rOffset = a * (1 - e * Math.cos(E)); // You might not need this if your orbits are circular
-            let xC = rOffset * Math.cos(nuOffset);
-            let yC = rOffset * Math.sin(nuOffset)
-
-            // Apply rotation transformations
-            // First, rotate by w (argument of periapsis) in the orbital plane
-            let xwC = xC * Math.cos(_w) - yC * Math.sin(_w);
-            let ywC = xC * Math.sin(_w) + yC * Math.cos(_w);     
-            
-            // Then, apply inclination (i) rotation
-            let xiC = xwC;
-            let yiC = ywC * Math.cos(_i);
-            let ziC = ywC * Math.sin(_i);        
-                
-            // Finally, rotate by omega (longitude of ascending node)
-            let xOffset = xiC * Math.cos(_omega) - yiC * Math.sin(_omega);
-            let yOffset = xiC * Math.sin(_omega) + yiC * Math.cos(_omega);
-            let zOffset = ziC; // Z-coordinate after inclination applied            
-
-
-            // Recalculate the position with the offset true anomaly
-            //let xOffset = rOffset * Math.cos(nuOffset) * Math.cos(_omega) - rOffset * Math.sin(nuOffset) * Math.sin(_omega);
-            //let yOffset = rOffset * Math.cos(nuOffset) * Math.sin(_omega) + rOffset * Math.sin(nuOffset) * Math.cos(_omega);
-            //let zOffset = rOffset * Math.sin(nuOffset) * Math.sin(_i);
-
-
-            // Apply the parent's position to the offset position for the cone
-            this.cone.position.set(
-                xOffset + parentX, 
-                zOffset + parentZ,
-                -(yOffset + parentY), 
-            );
-
-            const planetWorldPosition = new THREE.Vector3()
-            this.planetMesh.getWorldPosition(planetWorldPosition)
-            this.cone.lookAt(planetWorldPosition)
-            this.cone.rotateX(deg2Rad(90))
-            
-        }
-        */
     }
     
 }
