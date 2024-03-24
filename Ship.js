@@ -4,10 +4,12 @@ import shiftNPush from "./shiftNPush";
 
 export class Ship {
 
-    constructor({from, to}) {
+    constructor({from, to, speed}) {
 
         this.from = from
         this.to = to
+        this.speed = speed
+
 
         // placeholder ship object
         this.geometry = new THREE.SphereGeometry(0.5, 32, 32);
@@ -34,9 +36,11 @@ export class Ship {
         this.journeyFraction
         this.from   // planet1
         this.to     // planet2
-        this.start
-        this.end
         this.removeFromWorld = false
+        const end = this.to.planetMesh.position
+        const start = this.from.planetMesh.position
+        const distance = start.distanceTo(end);
+        this.travelTime = distance / this.speed
 
 
         // line that displays ship's current path
@@ -53,20 +57,12 @@ export class Ship {
     }
 
     updateShipPosition(dT) {
-        // update end point of ship
-        //end = new THREE.Vector3(p2pPos[3], p2pPos[4], p2pPos[5])    
-
         this.elapsedTime += dT;
-
         let end = this.to.planetMesh.position
         let start = this.from.planetMesh.position
 
-        const speed = 0.002; // Units per second
-        const distance = start.distanceTo(end);
-        const travelTime = distance / speed;
-
         // Calculate the fraction of the journey completed
-        this.journeyFraction = (this.elapsedTime % travelTime) / travelTime;
+        this.journeyFraction = (this.elapsedTime % this.travelTime) / this.travelTime;
 
         // Update object position
         this.shipObject.position.lerpVectors(start, end, this.journeyFraction);   

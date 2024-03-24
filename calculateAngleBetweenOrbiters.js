@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
+// returns a signed number between -180 and 180
 export function calculateAngleBetweenOrbiters(orbiter1, orbiter2) {
-    // Assuming line1 and line2 are THREE.Line objects and share a common start point
 
     let startPoint
 
@@ -19,9 +19,16 @@ export function calculateAngleBetweenOrbiters(orbiter1, orbiter2) {
 
     let angleRadians = Math.acos(directionVector1.dot(directionVector2));
 
+    // Use the cross product to determine the sign of the angle
+    let crossProduct = new THREE.Vector3().crossVectors(directionVector1, directionVector2);
+    // Assuming Z axis as the normal to the orbital plane
+    let sign = Math.sign(crossProduct.z);    
+
+    // Adjust the angle based on the sign
+    angleRadians *= sign;
+
     let angleDegrees = angleRadians * (180 / Math.PI);
 
     return angleDegrees
-    //console.log(angleDegrees)
 
 }
