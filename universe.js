@@ -16,8 +16,8 @@ axesHelper.position.set(0,0,0)
 export const universeProperties = {
     showGrid: false,
     showAxes: false,
-    G: 6.67430e-11 // Gravitational constant
-    //G: 6.67430e-7 // increasing G is a hacky way to speed up all planetary motion
+    //G: 6.67430e-11 // Gravitational constant
+    G: 6.67430e-11 // increasing G is a hacky way to speed up all planetary motion
 }
 
 export function initUniverse(gui, scene, renderer, camera) {

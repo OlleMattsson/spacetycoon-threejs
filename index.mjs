@@ -26,13 +26,13 @@ initSolarSystem(gui, scene, composer, camera)
 
 // planets & moons 
 const dynPlanets = []
-const planet1 = new Planet({a: 12, omega: 270, trailLength: 1000, mass: 200000, size: 2, drawCone: true, solarSystem, planetColor: 0x0000ff, name: "Olmia"})
-const moon1 = new Planet({a: 4, orbitalParent: planet1, trailLength: 0, trailColor: 0x0000ff, i: 20,size: 0.5, planetColor: 0xb09278, name: "Aave"})
+const planet1 = new Planet({a: 12, omega: 220, e: 0, trailLength: 1000, mass: 200000, size: 2, drawCone: true, solarSystem, planetColor: 0x0000ff, name: "Olmia"})
+const moon1 = new Planet({a: 4, orbitalParent: planet1, trailLength: 0, trailColor: 0xffffff, i: 20,size: 0.5, planetColor: 0xb09278, name: "Aave"})
 
-const planet2 = new Planet({a: 35, i: 5, trailLength: 2000, mass: 1000000, size: 3, drawCone: true, planetColor: 0x6e138f, name: "Pandora"})
-const moon2 = new Planet({a: 5, orbitalParent: planet2, trailLength: 0, trailColor: 0x0000ff, i: 10, size: 0.5, name: "Titan"})
-const moon3 = new Planet({a: 8, orbitalParent: planet2, trailLength: 0, trailColor: 0x0000ff, i: 10, size: 0.6, planetColor: 0x754e00, name: "Perseus"})
-const moon4 = new Planet({a: 10, orbitalParent: planet2, trailLength: 0, trailColor: 0x0000ff, i: 90, size: 0.3, planetColor: 0xff7700, name: "Styx"})
+const planet2 = new Planet({a: 35, i: 5, e: 0, trailLength: 2000, mass: 1000000, size: 3, drawCone: true, planetColor: 0x6e138f, name: "Pandora"})
+const moon2 = new Planet({a: 5, orbitalParent: planet2, trailLength: 0, trailColor: 0xffffff, i: 0, size: 0.5, name: "Titan"})
+const moon3 = new Planet({a: 8, orbitalParent: planet2, trailLength: 0, trailColor: 0xffffff, i: 10, size: 0.6, planetColor: 0x754e00, name: "Perseus"})
+const moon4 = new Planet({a: 10, orbitalParent: planet2, trailLength: 0, trailColor: 0xffffff, i: 80, size: 0.3, planetColor: 0xff7700, name: "Styx"})
 
 
 dynPlanets.push(planet1, planet2, moon1,  moon2, moon3, moon4)
@@ -43,6 +43,8 @@ dynPlanets.forEach(p => {
     solarSystem.add(p.trailLine)
     //solarSystem.add(p.cone)
     solarSystem.add(p.parentLine)
+    solarSystem.add(p.orbitLine)
+    solarSystem.add(p.transferLine)
 })
 
 function addPlanetHandler() {
@@ -51,6 +53,7 @@ function addPlanetHandler() {
     dynPlanets.push(newPlanet)
     solarSystem.add(newPlanet.planetMesh)
     solarSystem.add(newPlanet.trailLine)
+    solarSystem.add(p.orbitLine)
 }
   
 scene.add(solarSystem);
@@ -118,11 +121,18 @@ function animate(time = 0) {    // default to 0, otherwise time is undefined on 
     sm.updateCameraPosition()
 
     // update planets
-    dynPlanets.forEach((p) => {
+    dynPlanets.forEach((p, i) => {
         p.updatePlanetPosition(dT)
         p.drawPlanetTrail()
         //p.drawLineToParent()
+        p.drawOrbit()
+
+        if (i === 0) {
+            p.drawTransferOrbit(planet2)
+        }
+
     })
+
 
     // update ships
     ships.forEach(s => {

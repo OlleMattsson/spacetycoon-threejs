@@ -2,7 +2,7 @@ import * as THREE from "three";
 import {solarSystemProperties} from './solarsystem'
 import { universeProperties } from './universe';
 import shiftNPush from "./shiftNPush";
-import {deg2Rad} from './helpers'
+import {deg2Rad, rad2Deg} from './helpers'
 
 export class Planet {
     mass 
@@ -68,7 +68,7 @@ export class Planet {
 
         // planet trail
         this.trailGeometry = new THREE.BufferGeometry();        
-        this.trailMaterial = new THREE.LineBasicMaterial({ color: this.trailColor });
+        this.trailMaterial = new THREE.LineBasicMaterial({ color: this.trailColor});
         this.trailLine = new THREE.Line(this.trailGeometry, this.trailMaterial);
         this.trailPositions = new Float32Array(this.properties.trailLength * 3); // Each point requires x, y, z coordinates
         this.pointIndex = 0; // Keep track of the last point added to the orbit path
@@ -80,6 +80,22 @@ export class Planet {
         this.orbiter2PlanetPositions = new Float32Array(2*3) // we need two points with three coordinates each
         this.parentLineGeometry.setAttribute('position', new THREE.BufferAttribute(this.orbiter2PlanetPositions, 3))
         this.parentLine = new THREE.Line(this.parentLineGeometry, parentLineMaterial)
+
+        // orbit line
+        this.orbitGeometry = new THREE.BufferGeometry();        
+        this.orbitMaterial = new THREE.LineBasicMaterial({ color: this.trailColor });
+        this.orbitLine = new THREE.Line(this.orbitGeometry, this.orbitMaterial);
+        this.orbitPositions = new Float32Array(360 * 3); // Each point requires x, y, z coordinates
+        this.pointIndex = 0; // Keep track of the last point added to the orbit path
+        this.orbitGeometry.setAttribute("position", new THREE.BufferAttribute(this.orbitPositions, 3));        
+
+        // hohmann transfer line
+        this.transferGeometry = new THREE.BufferGeometry();        
+        this.transferMaterial = new THREE.LineBasicMaterial({ color: this.trailColor });
+        this.transferLine = new THREE.Line(this.transferGeometry, this.transferMaterial);
+        this.transferPositions = new Float32Array(360 * 3); // Each point requires x, y, z coordinates
+        this.transferPointIndex = 0; // Keep track of the last point added to the transfer path
+        this.transferGeometry.setAttribute("position", new THREE.BufferAttribute(this.transferPositions, 3));        
     }
 
     initPlanetUI(parentFolder, scene, camera, renderer) {
@@ -166,6 +182,36 @@ export class Planet {
         }        
     }
 
+    drawOrbit() {
+        for (let i = 0; i <= this.orbitPositions.length / 3; i++) {
+            const position = this.getPlanetPositionFromTrueAnomaly(i)
+            this.orbitPositions[i * 3] = position.x;       
+            this.orbitPositions[i * 3 + 1] = position.y;
+            this.orbitPositions[i * 3 + 2] = position.z;
+            this.orbitGeometry.attributes.position.needsUpdate = true;       
+        }
+
+    }
+
+    drawTransferOrbit(toPlanet) {
+        const transferOrbit = this.calculateHohmannTransferOrbit(this.properties, toPlanet.properties)
+
+        //console.log(transferOrbit)
+
+        for (let deg = 0; deg <= this.transferPositions.length / 3; deg++) {
+            const position = this.getPlanetPositionFromTrueAnomalyAndElements({
+                ...transferOrbit, 
+                meanAnomalyDegrees: deg,
+                //orbitalParentPosition: this.planetMesh.position                
+            })
+            this.transferPositions[deg * 3] = position.x;       
+            this.transferPositions[deg * 3 + 1] = position.y;
+            this.transferPositions[deg * 3 + 2] = position.z;
+            this.transferGeometry.attributes.position.needsUpdate = true;       
+        }
+
+    }
+
     drawLineToParent() {
         this.orbiter2PlanetPositions[0] = this.planetMesh.position.x
         this.orbiter2PlanetPositions[1] = this.planetMesh.position.y
@@ -186,10 +232,19 @@ export class Planet {
 
     updatePlanetPosition(deltaTime) {
 
+        const position = this.getPlanetPosition(deltaTime)
+
+        // set the the position of the planet mesh
+        // Z and Y positions are switched so that orbits are mapped to the X,Z plane 
+        // which lays flat instead of teh XY plane which is vertical 
+        this.planetMesh.position.copy(position)
+    }
+
+    getPlanetPosition(deltaTime) {
         const {i, e, a, omega, w} = this.properties
 
         // convert elements in degrees to radians
-        const _i = (i) * Math.PI / 180 // subtracting 90 so that inclination of 0 degrees is an orbit around the equator
+        const _i = (i) * Math.PI / 180
         const _omega = omega * Math.PI / 180
         const _w = w * Math.PI / 180
 
@@ -241,17 +296,199 @@ export class Planet {
         const parentX = this.orbitalParent?.planetMesh.position.x || 0
         const parentY = this.orbitalParent?.planetMesh.position.y || 0
         const parentZ = this.orbitalParent?.planetMesh.position.z || 0
-
-        // set the the position of the planet mesh
-        // Z and Y positions are switched so that orbits are mapped to the X,Z plane 
-        // which lays flat instead of teh XY plane which is vertical 
-        this.planetMesh.position.set(
+        
+        return new THREE.Vector3(
             X + parentX, 
             Z + parentY,
-            -(Y - parentZ), // flip sign to change direction of rotation
-        );     
+            -(Y - parentZ), // flip sign to change direction of rotation for our coordinate system where XZ is the floor and Y is up
+        )
     }
+
+    getPlanetPositionFromTrueAnomaly(nuDegrees) {
+        const {i, e, a, omega, w} = this.properties;
     
+        // Convert elements and true anomaly in degrees to radians
+        const _i = i * Math.PI / 180; // No subtraction by 90; direct conversion
+        const _omega = omega * Math.PI / 180;
+        const _w = w * Math.PI / 180;
+        const nu = nuDegrees * Math.PI / 180; // Convert true anomaly from degrees to radians
+        let E = this.properties.M + e * Math.sin(this.properties.M); // Eccentric anomaly, approximate
+
+    
+        // Calculate position in the orbit plane using given true anomaly nu
+        const r = a * (1 - e * e) / (1 + e * Math.cos(nu));
+        let x = r * Math.cos(nu);
+        let y = r * Math.sin(nu);
+    
+        // Apply rotation transformations
+        // First, rotate by w (argument of periapsis) in the orbital plane
+        let xw = x * Math.cos(_w) - y * Math.sin(_w);
+        let yw = x * Math.sin(_w) + y * Math.cos(_w);
+    
+        // Then, apply inclination (i) rotation
+        let xi = xw;
+        let yi = yw * Math.cos(_i);
+        let zi = yw * Math.sin(_i);
+    
+        // Finally, rotate by omega (longitude of ascending node)
+        let X = xi * Math.cos(_omega) - yi * Math.sin(_omega);
+        let Y = xi * Math.sin(_omega) + yi * Math.cos(_omega);
+        let Z = zi;
+    
+        // If planet has a parent, translate to parent coordinates
+        const parentX = this.orbitalParent?.planetMesh.position.x || 0;
+        const parentY = this.orbitalParent?.planetMesh.position.y || 0;
+        const parentZ = this.orbitalParent?.planetMesh.position.z || 0;
+    
+        return new THREE.Vector3(
+            X + parentX,
+            Z + parentY, // Assume Z is up, swap Y and Z to match common 3D conventions
+            -(Y - parentZ) // flip sign to change direction of rotation, if needed based on your coordinate system
+        );
+    } 
+
+    getPlanetPositionFromMeanAnomaly(meanAnomalyDegrees) {
+        const {i, e, a, omega, w} = this.properties;
+    
+        // Convert elements and mean anomaly in degrees to radians
+        const _i = i * Math.PI / 180;
+        const _omega = omega * Math.PI / 180;
+        const _w = w * Math.PI / 180;
+        const M = meanAnomalyDegrees * Math.PI / 180; // Convert mean anomaly from degrees to radians
+    
+        // Simplified conversion from mean anomaly to eccentric anomaly (E)
+        let E = M + e * Math.sin(M); // Iterate for a better approximation if necessary
+    
+        // Conversion from eccentric anomaly to true anomaly (ν)
+        let nu = 2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2));
+    
+        // Calculate position in the orbit plane
+        let r = a * (1 - e * Math.cos(E)); // Distance from the central body
+        let x = r * Math.cos(nu);
+        let y = r * Math.sin(nu);
+    
+        // Apply rotation transformations
+        // First, rotate by w (argument of periapsis) in the orbital plane
+        let xw = x * Math.cos(_w) - y * Math.sin(_w);
+        let yw = x * Math.sin(_w) + y * Math.cos(_w);
+    
+        // Then, apply inclination (i) rotation
+        let xi = xw;
+        let yi = yw * Math.cos(_i);
+        let zi = yw * Math.sin(_i);
+    
+        // Finally, rotate by omega (longitude of ascending node)
+        let X = xi * Math.cos(_omega) - yi * Math.sin(_omega);
+        let Y = xi * Math.sin(_omega) + yi * Math.cos(_omega);
+        let Z = zi;
+    
+        // if planet has a parent translate to parent coordinates
+        const parentX = this.orbitalParent?.planetMesh.position.x || 0;
+        const parentY = this.orbitalParent?.planetMesh.position.y || 0;
+        const parentZ = this.orbitalParent?.planetMesh.position.z || 0;
+        
+        return new THREE.Vector3(
+            X + parentX, 
+            Z + parentY, // Assuming Z is up, adjust if your setup differs
+            -(Y - parentZ) // flip sign to change direction of rotation, if necessary
+        );
+    }    
+    
+    calculateHohmannTransferOrbit(orbit1, orbit2) {
+
+        let mu
+
+        if (this.orbitalParent === null) { // parent is sun
+            mu = universeProperties.G * solarSystemProperties.sunMass // mass of the central body (eg satellite orbiting a moon)
+        } else {
+            mu = universeProperties.G * this.orbitalParent.mass
+        }
+
+
+        //const nu_departure = nu; // True anomaly at departure
+           
+        // Semi-major axis of the transfer orbit
+        const a_transfer = (orbit1.a + orbit2.a) / 2;
+    
+        // Eccentricity of the transfer orbit
+        const e_transfer = (orbit2.a - orbit1.a) / (orbit1.a + orbit2.a);
+    
+        // Assuming the transfer occurs in the same plane
+        const i_transfer = orbit1.i; // Inclination
+
+        // Adjust omega (Ω) for the transfer orbit to align with the current position of the departing orbiter
+        // This is conceptual; in practice, you might adjust omega based on the departure angle or other criteria
+        const adjustedOmega = orbit1.omega + rad2Deg(orbit1.M);
+
+        const omega_transfer = adjustedOmega; // Longitude of ascending node
+    
+        // Argument of periapsis and true anomaly at departure
+        const w_transfer = 0; // Assuming departure from periapsis
+
+        // Velocity calculations (same as before)
+        const v1 = Math.sqrt(mu / orbit1.a);
+        const v2 = Math.sqrt(mu / orbit2.a);
+        const v_transfer1 = Math.sqrt(mu * ((2 / orbit1.a) - (1 / a_transfer)));
+        const v_transfer2 = Math.sqrt(mu * ((2 / orbit2.a) - (1 / a_transfer)));
+    
+        const deltaV1 = v_transfer1 - v1;
+        const deltaV2 = v2 - v_transfer2;
+        const totalDeltaV = Math.abs(deltaV1) + Math.abs(deltaV2);
+    
+        // Transfer time calculation (same as before)
+        const transferTime = Math.PI * Math.sqrt(Math.pow(a_transfer, 3) / mu);
+    
+        return {
+            a: a_transfer,
+            e: e_transfer,
+            i: i_transfer,
+            omega: omega_transfer,
+            w: w_transfer,
+            deltaV1,
+            deltaV2,
+            totalDeltaV,
+            transferTime
+        };
+    }   
+
+    getPlanetPositionFromTrueAnomalyAndElements({meanAnomalyDegrees, i, e, a, omega, w, orbitalParentPosition = new THREE.Vector3(0, 0, 0)}) {
+        // Convert orbital elements and mean anomaly from degrees to radians
+        const _i = i * Math.PI / 180;
+        const _omega = omega * Math.PI / 180;
+        const _w = w * Math.PI / 180;
+        const M = meanAnomalyDegrees * Math.PI / 180; // Convert mean anomaly from degrees to radians
+    
+        // Simplified conversion from mean anomaly to eccentric anomaly (E)
+        let E = M + e * Math.sin(M); // Iterate for a better approximation if necessary
+    
+        // Conversion from eccentric anomaly to true anomaly (ν)
+        let nu = 2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2));
+    
+        // Calculate position in the orbit plane
+        let r = a * (1 - e * Math.cos(E)); // Distance from the central body
+        
+        let x = r * Math.cos(nu);
+        let y = r * Math.sin(nu);
+    
+        // Apply rotation transformations
+        let xw = x * Math.cos(_w) - y * Math.sin(_w);
+        let yw = x * Math.sin(_w) + y * Math.cos(_w);
+    
+        let xi = xw;
+        let yi = yw * Math.cos(_i);
+        let zi = yw * Math.sin(_i);
+    
+        let X = xi * Math.cos(_omega) - yi * Math.sin(_omega);
+        let Y = xi * Math.sin(_omega) + yi * Math.cos(_omega);
+        let Z = zi;
+    
+        // Translate to parent coordinates if necessary
+        return new THREE.Vector3(
+            X + orbitalParentPosition.x, 
+            Z + orbitalParentPosition.y, // Assuming Z is up, adjust if your setup differs
+            -(Y - orbitalParentPosition.z) // flip sign to change direction of rotation, if necessary
+        );
+    }    
 }
 
 
