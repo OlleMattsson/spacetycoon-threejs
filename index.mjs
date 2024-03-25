@@ -74,7 +74,7 @@ document.addEventListener('keydown', (event) => {
 
 function launchShip({from, to, speed}) {
 
-    console.log("Launching ship!")
+    //console.log("Launching ship!")
 
     const newShip = new Ship({from, to, speed})
     ships.push(newShip)
@@ -89,14 +89,14 @@ function startCooldown(duration) {
     if (cooledDown) {
         cooledDown = false; // Mark as in cooldown
         
-        console.log("Cooldown started.");
+        //console.log("Cooldown started.");
 
         setTimeout(() => {
             cooledDown = true; // Reset back to cooled down after duration
-            console.log("Cooldown complete. Ready again.");
+            //console.log("Cooldown complete. Ready again.");
         }, duration * 1000); // Convert duration from seconds to milliseconds
     } else {
-        console.log("Cooldown already in progress.");
+        //console.log("Cooldown already in progress.");
     }
 }
 
@@ -114,6 +114,9 @@ function animate(time = 0) {    // default to 0, otherwise time is undefined on 
     const dT = (time - pT);     // calculate deltaTime in milliseconds, dT
     pT = time;                  // Update lastTime for the next frame  
 
+    // update amera
+    sm.updateCameraPosition()
+
     // update planets
     dynPlanets.forEach((p) => {
         p.updatePlanetPosition(dT)
@@ -129,7 +132,7 @@ function animate(time = 0) {    // default to 0, otherwise time is undefined on 
 
         // mark ship for removal from scene if the journey has been completed
         if (s.checkJourneyComplete()) {
-            console.log(`Journey took ${s.elapsedTime / 1000} seconds `);
+            //console.log(`Journey took ${s.elapsedTime / 1000} seconds `);
             solarSystem.remove(s.shipObject);
             solarSystem.remove(s.shipTrailLine);
             s.removeFromWorld = true
@@ -148,7 +151,6 @@ function animate(time = 0) {    // default to 0, otherwise time is undefined on 
     // auto ship launcher from planet1 to planet 2
     const angle = calculateAngleBetweenOrbiters(dynPlanets[0], dynPlanets[1])
     if (angle < 100 && angle > 40 && cooledDown) {
-       // console.log(angle)
         launchShip({from: planet1, to: planet2, speed: 0.002})
         startCooldown(3)
     }

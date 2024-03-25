@@ -22,7 +22,6 @@ export function calculateAngleBetweenOrbiters(orbiter1, orbiter2) {
     // Use the cross product to determine the sign of the angle
     let crossProduct = new THREE.Vector3().crossVectors(directionVector1, directionVector2);
     // Assuming Y axis as the normal to the orbital plane
-    // i think this only works for orbits that are more or less "flat" in the XZ plane
     let sign = Math.sign(crossProduct.y);    
 
     // Adjust the angle based on the sign

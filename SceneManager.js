@@ -14,13 +14,15 @@ export class SceneManager {
     camera
     raycaster
     composer
+    focus
 
     constructor() {
         this.scene = new THREE.Scene();
-        this.renderer = new THREE.WebGLRenderer();
+        this.renderer = new THREE.WebGLRenderer({antialias: true});
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.raycaster = new THREE.Raycaster();
         this.composer = new EffectComposer(this.renderer);
+        this.focus = null
 
         // Camera
         this.camera = new THREE.PerspectiveCamera(
@@ -59,6 +61,10 @@ export class SceneManager {
         this.controls.target.set(0, 0, 0); // Set the look at point to the center of the star
         this.controls.enableZoom = true;
         this.controls.zoomSpeed = 1.0;
+        this.controls.enableDamping = true;
+        this.controls.dampingFactor =0.05
+        this.controls.maxDistance = 100
+        this.controls.minDistance = 1
         this.controls.update(); // Must be called after any manual changes to the camera's transform
 
         // init lil-gui
@@ -73,9 +79,10 @@ export class SceneManager {
   
 
         // events
-
-        this.clickTimeout = null;
-        this.clickDelay = 200; // Delay in milliseconds
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+        const threshold = 5; // Movement threshold to differentiate between click and drag
 
 
         // Handle window resize
@@ -85,35 +92,39 @@ export class SceneManager {
             this.camera.updateProjectionMatrix();
         });
 
-        // handle mouse clock
-        window.addEventListener('click', (event) => this.onMouseClick(event)); // fat arrow ensures this binds to onMouseClick
+        document.addEventListener('dblclick', (event) => this.onDoubleClick(event));
 
-        document.addEventListener('dblclick', function(event) {
-            clearTimeout(this.clickTimeout); // Prevent the pending click action
-            this.clickTimeout = null;
-            console.log('Double-click detected!');
-            event.preventDefault();
-            event.stopPropagation();
+
+        
+        document.addEventListener('mousedown', function(event) {
+            // Store the starting point
+            startX = event.pageX;
+            startY = event.pageY;
+            isDragging = false;
         });
+        
+        document.addEventListener('mousemove', function(event) {
+            // Check if the mouse has moved more than the threshold
+            if (Math.abs(startX - event.pageX) > threshold || Math.abs(startY - event.pageY) > threshold) {
+                isDragging = true;
+            }
+        });        
+
+        document.addEventListener('mouseup', (event) => {
+            if (isDragging) {
+                // handle dragging
+            } else {
+                console.log('Click detected');
+                this.onClick(event)
+
+            }
+            // Reset dragging state
+            isDragging = false;
+        });        
 
     }
 
-    onMouseClick(event) {
-
-
-        if (this.clickTimeout !== null) {
-            clearTimeout(this.clickTimeout);
-            this.clickTimeout = null;
-            // Don't execute click action, as we're considering this as part of a dblclick.
-            return;
-        }
-    
-        this.clickTimeout = setTimeout(() => {
-            console.log('Click event action');
-            this.clickTimeout = null;
-        }, this.clickDelay);        
-
-
+    getSelected(event) {
         // Calculate mouse position in normalized device coordinates (-1 to +1) for both components
         const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
         const mouseY = - (event.clientY / window.innerHeight) * 2 + 1;   
@@ -121,31 +132,70 @@ export class SceneManager {
 
         // Update the picking ray with the camera and mouse position
         this.raycaster.setFromCamera(mouse, this.camera);
-    
+
         // Calculate objects intersecting the picking ray
         const intersects = this.raycaster.intersectObjects(this.scene.children);
 
         if (intersects.length) {
             const selected = intersects[0]
-            const {planet} = selected.object.userData
-            console.log(planet.properties.name)
-            console.log(planet.planetMesh.position)
-
-            this.camera.lookAt(planet.planetMesh.position); // Set the look at point to the center of the    
-            this.controls.target.copy(planet.planetMesh.position);
-            this.controls.update();
-
-            this.outlinePass.selectedObjects = [planet.planetMesh];
-
-            this.composer.render(this.scene, this.camera);
+            return selected.object.userData.planet
         }
 
-    
-        /*
-        for (let i = 0; i < intersects.length; i++) {
-            // Example: Change color of the intersected object
-            intersects[i].object.material.color.set(0xff0000);
+        return null
+    }
+
+    onClick(event) {
+        const selected = this.getSelected(event)
+
+        if (selected) {
+            console.log(selected.properties.name)
+            this.outlinePass.selectedObjects = [selected.planetMesh];
+            this.composer.render(this.scene, this.camera);                
+        } else {
+            this.outlinePass.selectedObjects = [];
+            this.composer.render(this.scene, this.camera);                   
         }
-        */
+
     }    
+
+    onDoubleClick(event) {
+        console.log("double click")
+        const selected = this.getSelected(event)
+
+        if (selected) {
+            this.focus = selected
+        } else {
+            console.log("clicked nothing")
+            this.focus = null
+                   
+        }
+
+
+
+    }
+
+    updateCameraPosition() {
+       
+        if(this.focus !== null) {
+
+            const planetPosition = this.focus.planetMesh.position
+   
+            /*
+            this.camera.position.x = planetPosition.x - 10
+            this.camera.position.y = planetPosition.y +10
+            this.camera.position.z = planetPosition.z - 10
+            */
+            this.camera.lookAt(planetPosition); // Set the look at point to the center of the            
+            
+            this.controls.target.copy(planetPosition);
+            this.controls.maxDistance = 10
+            this.controls.minDistance = 10
+            
+            this.controls.update();     
+             
+        } else {
+            this.controls.maxDistance = 100
+            this.controls.update();     
+        }
+    }
 }
