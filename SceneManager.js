@@ -28,7 +28,7 @@ export class SceneManager {
         this.camera = new THREE.PerspectiveCamera(
             75,
             window.innerWidth / window.innerHeight,
-            0.1,
+            1,
             1000
         );
         this.camera.position.x = 20;
@@ -90,6 +90,11 @@ export class SceneManager {
             this.renderer.setSize(window.innerWidth, window.innerHeight);
             this.camera.aspect = window.innerWidth / window.innerHeight;
             this.camera.updateProjectionMatrix();
+
+            // If using an effects composer, update its size as well
+            if (this.composer) {
+                this.composer.setSize(window.innerWidth, window.innerHeight);
+            }
         });
 
         document.addEventListener('dblclick', (event) => this.onDoubleClick(event));
