@@ -44,7 +44,7 @@ dynPlanets.forEach(p => {
     solarSystem.add(p.trailLine)
     solarSystem.add(p.parentLine)
     solarSystem.add(p.orbitLine)
-    solarSystem.add(p.transferLine)
+    //solarSystem.add(p.transferLine)
     solarSystem.add(p.ghostPlanetMesh)
 })
 
@@ -58,7 +58,7 @@ function addPlanetHandler() {
 }
    
 scene.add(solarSystem);
-scene.add(sm.cameraMesh)
+//scene.add(sm.cameraMesh) // debug camera mesh
 
 // Create 10000 stars within a spread of 2000 units
 const stars = createStarField(4500, 2000, 300);
@@ -102,7 +102,7 @@ function launchShipHohmann({departure, destination}) {
     hohmannShips.push(newShip)
     solarSystem.add(newShip.planetMesh)
     //solarSystem.add(newShip.trailLine )
-    solarSystem.add(newShip.orbitLine )
+    //solarSystem.add(newShip.orbitLine )
 }
 
 // Define the global variable to track cooldown state

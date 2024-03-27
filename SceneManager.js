@@ -181,15 +181,18 @@ export class SceneManager {
         this.raycaster.setFromCamera(mouse, this.renderCamera);
 
         // Calculate objects intersecting the picking ray
+        // the first elmenet of intersects is also nearest to camera
         const intersects = this.raycaster.intersectObjects(this.scene.children); // sorted list of intersects
 
-        // the first elmenet of intersects is also nearest to camera
-        if (intersects.length) {
-            const selected = intersects[0]
-            return selected.object.userData.planet
-        }
+        // intersects contains also lines but we're only interested in finding the first Mesh
+        const closestMesh = intersects.find(e => e.object.type === "Mesh")
 
-        return null
+        if (closestMesh) {
+            // return the planet for the mesh
+            return closestMesh.object.userData.planet
+        } else {
+            return null
+        }
     }
 
     onClickHandler(event) {
