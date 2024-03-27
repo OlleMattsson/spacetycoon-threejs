@@ -169,6 +169,17 @@ export class SceneManager {
             }, this.isScrollingTimeout); 
 
         }); 
+
+        document.addEventListener('keydown', (event) => {
+            // Pressing F key should focus on the currently selected planet
+            if (event && event.key === 'f' && event.code === 'KeyF') {
+                if (this.outlinePass.selectedObjects.length) {
+                    this.focus = this.outlinePass.selectedObjects[0].userData.planet
+                } else {
+                    this.focus = null
+                }            
+            }
+        })        
     }    
 
     getSelected(event) {
