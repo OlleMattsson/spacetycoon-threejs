@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
@@ -90,6 +89,7 @@ export class SceneManager {
         this.isDragging = false;
         this.mouseIsDown = false
         this.isScrolling = false
+        this.isScrollingTimeout = 100; // time in ms to turn of scroll event
         this.scrolldeltaY = 0
         let startX = 0;
         let startY = 0;
@@ -157,29 +157,19 @@ export class SceneManager {
         document.addEventListener('wheel', (event) => {
             this.isScrolling = true
             this.scrolldeltaY = event.deltaY
-            console.log(event.deltaY)
 
             // Clear the previous timeout, if any
             if (scrollTimeout !== null) {
                 clearTimeout(scrollTimeout);
             }
 
-            // Set a new timeout
+            // set isScrolling to false after a timeout
             scrollTimeout = setTimeout(() => {
-                console.log('Scrolling has stopped');
                 this.isScrolling = false
-                // Perform any actions you need after scrolling has stopped
-            }, 100); // 150 milliseconds is a common choice, but adjust as needed
+            }, this.isScrollingTimeout); 
 
         }); 
     }    
-
-    disposeOrbitControl() {
-        if (this.controls) {
-            this.controls.dispose(); // Remove event listeners
-            this.controls = null; // Allow the controls to be garbage collected
-        }
-    }
 
     getSelected(event) {
         // Calculate mouse position in normalized device coordinates (-1 to +1) for both components

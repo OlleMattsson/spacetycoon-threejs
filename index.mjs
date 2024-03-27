@@ -1,19 +1,16 @@
 import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import GUI from 'lil-gui';
 import { initUniverse } from "./universe";
 import { initSolarSystem, solarSystem} from "./solarsystem";
 import { Planet } from "./planet";
 import { createStarField } from "./starfield";
-import {calculateAngleBetweenOrbiters} from './calculateAngleBetweenOrbiters'
 import {Ship} from './Ship'
 import { SceneManager } from "./SceneManager";
-import { rad2Deg} from './helpers'
 
-const clock = new THREE.Clock();
+const {MathUtils: {radToDeg}, Clock} = THREE
+
+const clock = new Clock();
 const sm = new SceneManager()
 const {gui, camera, scene, composer} = sm
-
 /**
  * INITIALIZE GAME STUFF
  */
@@ -171,7 +168,7 @@ function animate() {
             if (orbitIntersection)    {
                 const correctionDegrees = 0 // the intersection preiction is a few degrees of for some reason
                 const intersectionPosition = p.getPlanetPositionFromMeanAnomalyAndElements({
-                    meanAnomalyDegrees: THREE.MathUtils.radToDeg(orbitIntersection ) + correctionDegrees,
+                    meanAnomalyDegrees: radToDeg(orbitIntersection ) + correctionDegrees,
                     ...transferOrbit
                 })
 

@@ -49,6 +49,18 @@ export class Planet {
         this.drawCone = drawCone
         this.solarSystem = solarSystem
 
+        
+        this.orbitalElements = {
+            // Keplerian motion
+            i, // inclination in degrees
+            a, // Semi-major axis in meters 
+            e, // eccentricity 0 = circular, 0 < e < 1 =  elliptic, 1 = parabolic, e > 1 hyperbolic
+            M, // Mean Anomaly in radians, 
+            omega, // Longitude of the Ascending Node in degrees
+            w,  // Argument of Periapsis in degrees            
+        }
+
+        // TODO: remove the orbital elements from properties
         this.properties = {
             // Keplerian motion
             i, // inclination in degrees
