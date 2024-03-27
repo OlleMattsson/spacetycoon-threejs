@@ -77,7 +77,7 @@ const texture = loader.load('./bitmaps/2k_sun.jpg');
 
 // Sun
 const sunGeometry = new THREE.SphereGeometry(5, 32, 32);
-const sunMaterial = new THREE.MeshBasicMaterial({ map: texture });
+const sunMaterial = new THREE.MeshLambertMaterial({ map: texture });
 const sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
 sunMesh.userData.planet = sunMesh
 

@@ -21,7 +21,7 @@ export class SceneManager {
 
     constructor() {
         this.scene = new THREE.Scene();
-        this.renderer = new THREE.WebGLRenderer({antialias: true});
+        this.renderer = new THREE.WebGLRenderer({antialias: true, physicallyCorrectLights: true});
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.raycaster = new THREE.Raycaster();
         this.composer = new EffectComposer(this.renderer);
@@ -30,35 +30,19 @@ export class SceneManager {
         this.cameraMinDistance = 20
 
         // Camera 
-        this.mainCamera =new THREE.PerspectiveCamera(
-            75,
-            window.innerWidth / window.innerHeight,
-            2,
-            1000
-        );
+        this.mainCamera = new THREE.PerspectiveCamera(75,window.innerWidth / window.innerHeight,1,1000);
         this.mainCamera.position.x = 20;
         this.mainCamera.position.y = 20;
         this.mainCamera.position.z = 40;
 
-
-        // camera mesh
+        // debug camera
+        this.debugCamera = new THREE.PerspectiveCamera(75,window.innerWidth / window.innerHeight,1,1000);
         this.cameraGeometry = new THREE.SphereGeometry(1, 32, 32);
         this.cameraMaterial = new THREE.MeshLambertMaterial({ color: 0xff0000 });
         this.cameraMesh = new THREE.Mesh(this.cameraGeometry, this.cameraMaterial);   
 
-
-        this.OrthographicCamera = new THREE.OrthographicCamera( window.innerWidth / - 2, window.innerWidth / 2,  window.innerHeight / 2,  window.innerHeight / - 2, 1, 1000 );
-
-        this.debugCamera =new THREE.PerspectiveCamera(
-            75,
-            window.innerWidth / window.innerHeight,
-            1,
-            1000
-        );
-
-        this.renderCamera = this.mainCamera
-
-
+        // camera currently being used for rendering
+        this.renderCamera = this.mainCamera 
 
         // Basic render pass, ie render everything in the scene
         const renderPass = new RenderPass(this.scene, this.renderCamera);
@@ -78,7 +62,6 @@ export class SceneManager {
         // add renderer to DOM
         document.body.appendChild(this.renderer.domElement);
 
-
         // Controls
         this.controls = new CameraControls(this.renderCamera, this.renderer.domElement);
         this.controls.setOrbitPoint(0, 0, 0); // Set the look at point to the center of the star
@@ -86,6 +69,12 @@ export class SceneManager {
         this.controls.zoomSpeed = 1.0;
         this.controls.maxDistance = 100
         this.controls.minDistance = 1
+
+        // track camera control
+        this.lastZoom = this.controls.distance; // Track the last zoom level
+        this.lastAzimuthAngle = this.controls.azimuthAngle; // Track the last azimuth angle
+        this.lastPolarAngle = this.controls.polarAngle; // Track the last polar angle
+        this.lastDistance = 10
 
         // init lil-gui
         this.gui = new GUI();
@@ -97,7 +86,6 @@ export class SceneManager {
         guiDomElement.style.left = '0px';
         guiDomElement.style.removeProperty('right');
   
-
         // events
         this.isDragging = false;
         this.mouseIsDown = false
@@ -106,7 +94,6 @@ export class SceneManager {
         let startX = 0;
         let startY = 0;
         const threshold = 5; // Movement threshold to differentiate between click and drag
-
 
         // Handle window resize
         window.addEventListener('resize', () => {
@@ -184,17 +171,7 @@ export class SceneManager {
                 // Perform any actions you need after scrolling has stopped
             }, 100); // 150 milliseconds is a common choice, but adjust as needed
 
-        });  
-
-        //this.cameraRotation = this.camera.rotation
-        //this.cameraPosition = this.camera.position
-
-        this.lastZoom = this.controls.distance; // Track the last zoom level
-        this.lastAzimuthAngle = this.controls.azimuthAngle; // Track the last azimuth angle
-        this.lastPolarAngle = this.controls.polarAngle; // Track the last polar angle
-        this.lastDistance = 10
-
-
+        }); 
     }    
 
     disposeOrbitControl() {
@@ -280,108 +257,25 @@ export class SceneManager {
         }
     }
 
-
-    normalizeRadians(angle) {
-        return angle % (2 * Math.PI);
-    }
-
-    updateCameraPosition(dT) {
+    updateFocusedCamera() {
 
         if (!this.focus) return;
 
-        const meanAnomalyNormalized = this.normalizeRadians(this.focus.properties.M)
+        const {x,y,z} = this.focus.planetMesh.position
+        this.controls.setTarget(x, y, z, true);
 
-            const {x,y,z} = this.focus.planetMesh.position
-            this.controls.setTarget(x, y, z, true);
-            //this.controls.rotateAzimuthTo( 30 * THREE.MathUtils.DEG2RAD, true );
-            //this.controls.rotateAzimuthTo( meanAnomalyNormalized, true );
-            
-            
-            //this.controls.moveTo(x, y, z)
-
-            if (!this.isScrolling) {
-                this.controls.dollyTo(this.lastDistance, true)
-            } else {
-                this.lastDistance = this.controls.distance
-            }
-
-            if (!this.isDragging) {
-                this.controls.rotateAzimuthTo( this.lastAzimuthAngle, true );
-                this.controls.rotatePolarTo( this.lastPolarAngle, true );               
-            } else {
-                this.lastAzimuthAngle = this.controls.azimuthAngle; // Track the last azimuth angle
-                this.lastPolarAngle = this.controls.polarAngle; // Track the last polar angle
-            }
-
-
-
-            this.controls.update( dT );
-        
-
-
-
-
-
-        /*
-
-
-        /// V1 FAIL
-
-        if(this.focus !== null) {
-
-            const planetPosition = this.focus.planetMesh.position
-
-            if (this.mouseIsDown && this.isDragging) {
-                console.log("rotating camera camera")
-
-                // use orbital controls
-                //this.cameraRotation = this.camera.rotation // vector3
-                this.cameraPosition = this.camera.position // vector3
-                console.log(this.cameraPosition?.y)
-                
-                if (!this.controls) {
-                    this.controls = initiateOrbitControls(this.camera, this.renderer)
-                }
-    
-
-            } else {
-
-                console.log("fixed camera")
-
-                if (this.controls) {
-                    this.controls.dispose(); // Remove event listeners
-                    this.controls = null; // Allow the controls to be garbage collected
-                }
-
-
-                // fix position to pre
-                console.log("stored camera position", this.cameraPosition?.y)
-                this.camera.position.x += planetPosition.x + this.cameraPosition?.x
-                this.camera.position.z += planetPosition.z + this.cameraPosition?.z
-                this.camera.position.y += planetPosition.y + this.cameraPosition?.y
-            }
-
-            //this.camera.lookAt(this.focus); // Set the look at point to the center of the            
-            
-            //this.controls.target.copy(planetPosition);
-
-            // kinda hacky way to keep the camera at a fixed distance while rotating
-            // note: causes some strange jittering
-            //this.controls.maxDistance = 10 //this.cameraMinDistance
-            //.controls.minDistance = 10 //this.cameraMinDistance
-            
-            //this.controls.update();     
-            //this.camera.updateProjectionMatrix();
-
-
+        if (!this.isScrolling) {
+            this.controls.dollyTo(this.lastDistance, true)
         } else {
-            if (!this.controls) {
-                this.controls = initiateOrbitControls(this.camera, this.renderer)
-            }
+            this.lastDistance = this.controls.distance
+        }
 
-            this.camera.updateProjectionMatrix();
-            this.controls.maxDistance = this.cameraMaxDistance
-            this.controls.update();     
-        }*/
+        if (!this.isDragging) {
+            this.controls.rotateAzimuthTo( this.lastAzimuthAngle, true );
+            this.controls.rotatePolarTo( this.lastPolarAngle, true );               
+        } else {
+            this.lastAzimuthAngle = this.controls.azimuthAngle; // Track the last azimuth angle
+            this.lastPolarAngle = this.controls.polarAngle; // Track the last polar angle
+        }
     }
 }

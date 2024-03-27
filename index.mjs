@@ -8,12 +8,11 @@ import { createStarField } from "./starfield";
 import {calculateAngleBetweenOrbiters} from './calculateAngleBetweenOrbiters'
 import {Ship} from './Ship'
 import { SceneManager } from "./SceneManager";
-import {deg2Rad, rad2Deg} from './helpers'
+import { rad2Deg} from './helpers'
 
+const clock = new THREE.Clock();
 const sm = new SceneManager()
-
-const {gui, renderer, camera, scene, controls, composer} = sm
-
+const {gui, camera, scene, composer} = sm
 
 /**
  * INITIALIZE GAME STUFF
@@ -29,11 +28,11 @@ initSolarSystem(gui, scene, composer, camera)
 const dynPlanets = []
 
 // first planetary system
-const olmia = new Planet({texturePath: './bitmaps/2k_earth_daymap.jpg', a: 12, omega: 220, e: 0, i: 0, trailLength: 1000, mass: 200000, size: 2, drawCone: true, solarSystem, planetColor: 0x0000ff, name: "Olmia"})
+const olmia = new Planet({texturePath: './bitmaps/2k_earth_daymap.jpg', a: 20, omega: 270, e: 0, i: 0, trailLength: 1000, mass: 200000, size: 2, drawCone: true, solarSystem, planetColor: 0x0000ff, name: "Olmia"})
 const moon1 = new Planet({texturePath: './bitmaps/2k_moon.jpg', a: 4, orbitalParent: olmia, trailLength: 0, trailColor: 0xffffff, i: 20,size: 0.5, planetColor: 0xb09278, name: "Aave"})
 
 // second planetary system
-const pandora = new Planet({texturePath: './bitmaps/2k_neptune.jpg',a: 35, i: 0, e: 0, trailLength: 2000, mass: 1000000, size: 3, drawCone: true, planetColor: 0x6e138f, name: "Pandora"})
+const pandora = new Planet({texturePath: './bitmaps/2k_neptune.jpg',a: 40, i: 0, e: 0, trailLength: 2000, mass: 1000000, size: 3, drawCone: true, planetColor: 0x6e138f, name: "Pandora"})
 const titan = new Planet({a: 5, orbitalParent: pandora, trailLength: 0, trailColor: 0xffffff, i: 0, size: 0.5, name: "Titan"})
 const perseus = new Planet({a: 8, orbitalParent: pandora, trailLength: 0, trailColor: 0xffffff, i: 10, size: 0.6, planetColor: 0x754e00, name: "Perseus"})
 const styx = new Planet({a: 10, orbitalParent: pandora, trailLength: 0, trailColor: 0xffffff, i: 80, size: 0.3, planetColor: 0xff7700, name: "Styx"})
@@ -96,10 +95,7 @@ function launchShip({from, to, speed}) {
 
 function launchShipHohmann({departure, destination}) {
     // calculate orbit
-
-    //const transferOrbit = planet1.calculateHohmannTransferOrbit(planet1.properties, planet2.properties)
     const transferOrbit = departure.calculateHohmannTransferOrbit(departure.properties, destination.properties, 5)
-
 
     const {a, e, i, omega, w} = transferOrbit
     const newShip = new Planet({a, e, i, omega, w, trailColor: 0x0000ff, planetColor: 0x00ff00, size: 0.3, trailLength: 1000, orbitalParent: departure.orbitalParent}) // with orbital elements
@@ -118,16 +114,16 @@ let cooledDown = true;
 
 function startCooldown(duration) {
     if (cooledDown) {
-        cooledDown = false; // Mark as in cooldown
+        // cooldown started
+        cooledDown = false; 
         
-        //console.log("Cooldown started.");
 
         setTimeout(() => {
-            cooledDown = true; // Reset back to cooled down after duration
-            //console.log("Cooldown complete. Ready again.");
-        }, duration * 1000); // Convert duration from seconds to milliseconds
+            // cooldown complete
+            cooledDown = true; 
+        }, duration * 1000); 
     } else {
-        //console.log("Cooldown already in progress.");
+        // handle cooldown already in progress
     }
 }
 
@@ -139,17 +135,12 @@ function updateSimulation() {
 /**
  * ANIMATION LOOP
  */
-let pT = 0;  
-const clock = new THREE.Clock();
-function animate(time = 0) {    // default to 0, otherwise time is undefined on the very first frame
-    const dT = (time - pT);     // calculate deltaTime in milliseconds, dT
-    pT = time;                  // Update lastTime for the next frame  
-    const delta = clock.getDelta();                   // Timestamp of previous frame, previousTime
+function animate() {
 
-    
-    
-    sm.updateCameraPosition(delta)
-    sm.controls.update( delta );
+    const delta = clock.getDelta();  
+    const dT = delta * 1000 // delta in secods for some code
+
+    sm.updateFocusedCamera()
 
 
     sm.cameraMesh.position.copy(sm.mainCamera.position) // update the camera mesh for the debug view
@@ -157,10 +148,12 @@ function animate(time = 0) {    // default to 0, otherwise time is undefined on 
     // update planets
     dynPlanets.forEach((p, i) => {
         p.updatePlanetPosition(dT)
-        //p.drawPlanetTrail()
-        //p.drawLineToParent()
         p.drawOrbit()
+        //p.drawLineToParent()
+        //p.drawPlanetTrail()
 
+        // example update transfer intersections and predictions
+        // the idea works but logic is hardcoded
         if (p.properties.name === "Olmia") {
 
             const destinationPlanet = pandora
@@ -168,21 +161,17 @@ function animate(time = 0) {    // default to 0, otherwise time is undefined on 
             // draw transfer orbit from planet1 to planet2
             const transferOrbit = p.drawTransferOrbit(destinationPlanet)
 
-
-
             const orbitIntersection = p.findOrbitIntersections({
                 a1: transferOrbit.a,
                 e1: transferOrbit.e,
                 a2: destinationPlanet.properties.a,
                 M1: p.properties.M
             })
-            
-            
+                    
             if (orbitIntersection)    {
                 const correctionDegrees = 0 // the intersection preiction is a few degrees of for some reason
                 const intersectionPosition = p.getPlanetPositionFromMeanAnomalyAndElements({
-                    meanAnomalyDegrees: rad2Deg(orbitIntersection ) + correctionDegrees,
-                    //meanAnomalyDegrees: orbitIntersection,
+                    meanAnomalyDegrees: THREE.MathUtils.radToDeg(orbitIntersection ) + correctionDegrees,
                     ...transferOrbit
                 })
 
@@ -191,7 +180,6 @@ function animate(time = 0) {    // default to 0, otherwise time is undefined on 
                 // calculate transfer time
                 const transferTime = p.calculateTravelTimeToMeanAnomaly(transferOrbit.a, orbitIntersection)
     
-                //console.log(transferTime)
                 // draw target planet at T = transferOrbit.transferTime
                 destinationPlanet.updateGhostPlanetPosition(dT + transferTime)            
             }
@@ -256,6 +244,7 @@ function animate(time = 0) {    // default to 0, otherwise time is undefined on 
     */
     
 
+    sm.controls.update( delta );
     composer.render(scene, camera);
     requestAnimationFrame(animate);
 }

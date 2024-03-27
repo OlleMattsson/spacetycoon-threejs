@@ -72,7 +72,7 @@ export class Planet {
         if (texturePath) {
             console.log(texturePath)
             planetTexture = loader.load(texturePath);
-            this.planetMaterial = new THREE.MeshBasicMaterial({ map: planetTexture });
+            this.planetMaterial = new THREE.MeshLambertMaterial({ map: planetTexture });
         } else {
             this.planetMaterial = new THREE.MeshLambertMaterial({ color: this.planetColor });
         }
