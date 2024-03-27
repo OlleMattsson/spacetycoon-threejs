@@ -25,11 +25,11 @@ initSolarSystem(gui, scene, composer, camera)
 const dynPlanets = []
 
 // first planetary system
-const olmia = new Planet({texturePath: './bitmaps/2k_earth_daymap.jpg', a: 20, omega: 270, e: 0, i: 0, trailLength: 1000, mass: 200000, size: 2, drawCone: true, solarSystem, planetColor: 0x0000ff, name: "Olmia"})
+const olmia = new Planet({texturePath: './bitmaps/2k_earth_daymap.jpg', a: 20, omega: 270, e: 0, i: 0, trailLength: 1000, mass: 200000, size: 2, solarSystem, planetColor: 0x0000ff, name: "Olmia"})
 const moon1 = new Planet({texturePath: './bitmaps/2k_moon.jpg', a: 4, orbitalParent: olmia, trailLength: 0, trailColor: 0xffffff, i: 20,size: 0.5, planetColor: 0xb09278, name: "Aave"})
 
 // second planetary system
-const pandora = new Planet({texturePath: './bitmaps/2k_neptune.jpg',a: 40, i: 0, e: 0, trailLength: 2000, mass: 1000000, size: 3, drawCone: true, planetColor: 0x6e138f, name: "Pandora"})
+const pandora = new Planet({texturePath: './bitmaps/2k_neptune.jpg',a: 40, i: 0, e: 0, trailLength: 2000, mass: 1000000, size: 3, planetColor: 0x6e138f, name: "Pandora"})
 const titan = new Planet({a: 5, orbitalParent: pandora, trailLength: 0, trailColor: 0xffffff, i: 0, size: 0.5, name: "Titan"})
 const perseus = new Planet({a: 8, orbitalParent: pandora, trailLength: 0, trailColor: 0xffffff, i: 10, size: 0.6, planetColor: 0x754e00, name: "Perseus"})
 const styx = new Planet({a: 10, orbitalParent: pandora, trailLength: 0, trailColor: 0xffffff, i: 80, size: 0.3, planetColor: 0xff7700, name: "Styx"})
@@ -42,7 +42,6 @@ dynPlanets.forEach(p => {
     p.initPlanetUI(planetsFolder, scene, camera, composer)
     solarSystem.add(p.planetMesh)
     solarSystem.add(p.trailLine)
-    //solarSystem.add(p.cone)
     solarSystem.add(p.parentLine)
     solarSystem.add(p.orbitLine)
     solarSystem.add(p.transferLine)

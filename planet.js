@@ -37,7 +37,6 @@ export class Planet {
         trailLength = 500, 
         orbitalParent = null,
         size = 1,
-        drawCone = false,
         solarSystem = null, // group
         name = "",
         texturePath = null
@@ -46,7 +45,6 @@ export class Planet {
         this.planetColor = planetColor
         this.trailColor = trailColor
         this.orbitalParent = orbitalParent
-        this.drawCone = drawCone
         this.solarSystem = solarSystem
         this.lastPosition = new THREE.Vector3()
         
@@ -67,11 +65,9 @@ export class Planet {
             name
         }
 
-
-        const loader = new THREE.TextureLoader();
-
-
+        
         // planet mesh
+        const loader = new THREE.TextureLoader();
         const planetTexture = texturePath ? loader.load(texturePath) : null;
         const planetMaterialProps = texturePath ? { map: planetTexture }: { color: this.planetColor }
         this.planetMaterial = new THREE.MeshLambertMaterial(planetMaterialProps);
