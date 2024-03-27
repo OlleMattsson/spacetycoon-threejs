@@ -23,6 +23,7 @@ export class Planet {
     size
     name
     texturePath
+    orbit
 
     constructor({
         mass = 1000, 
@@ -248,9 +249,6 @@ export class Planet {
         return 2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2));
     }
     
-
-
-
     calculateTransferOrbitAndLaunchWindow(departureOrbit, targetOrbit) {
         let mu
 
@@ -741,10 +739,12 @@ export class Planet {
     }
     
     findOrbitIntersections({a1, e1, a2, M1}) {
+
         // Convert mean anomaly M1 to true anomaly for the inner orbit
         const E1 = this.eccentricAnomalyFromMeanAnomaly(M1, e1);
         //const E1 = M1+ e1 * Math.sin(M1);
         const theta1Initial = this.trueAnomalyFromEccentricAnomaly(E1, e1);
+
 
     
         // Continue with the previous approach
@@ -781,6 +781,7 @@ export class Planet {
 
         const solutions = theta1Solution.map(theta1 => {
 
+
             // Convert true anomaly to eccentric anomaly
             const E1 = this.trueAnomalyToEccentricAnomaly(theta1, e1);
 
@@ -815,6 +816,3 @@ export class Planet {
         return t; // Time in seconds
     }
 }
-
-
-

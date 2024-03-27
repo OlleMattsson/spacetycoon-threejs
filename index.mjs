@@ -91,7 +91,7 @@ function launchShip({from, to, speed}) {
 
 function launchShipHohmann({departure, destination}) {
     // calculate orbit
-    const transferOrbit = departure.calculateHohmannTransferOrbit(departure.properties, destination.properties, 5)
+    const transferOrbit = departure.calculateHohmannTransferOrbit(departure.orbit, destination.orbit, 5)
 
     const {a, e, i, omega, w} = transferOrbit
     const newShip = new Planet({a, e, i, omega, w, trailColor: 0x0000ff, planetColor: 0x00ff00, size: 0.3, trailLength: 1000, orbitalParent: departure.orbitalParent}) // with orbital elements
@@ -150,6 +150,7 @@ function animate() {
 
         // example update transfer intersections and predictions
         // the idea works but logic is hardcoded
+
         if (p.properties.name === "Olmia") {
 
             const destinationPlanet = pandora
@@ -160,8 +161,8 @@ function animate() {
             const orbitIntersection = p.findOrbitIntersections({
                 a1: transferOrbit.a,
                 e1: transferOrbit.e,
-                a2: destinationPlanet.properties.a,
-                M1: p.properties.M
+                a2: destinationPlanet.orbit.a,
+                M1: p.orbit.M
             })
                     
             if (orbitIntersection)    {
@@ -170,6 +171,7 @@ function animate() {
                     meanAnomalyDegrees: radToDeg(orbitIntersection ) + correctionDegrees,
                     ...transferOrbit
                 })
+
 
                 p.ghostPlanetMesh.position.copy(intersectionPosition)
 
