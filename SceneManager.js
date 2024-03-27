@@ -3,8 +3,10 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
-
+import CameraControls from 'camera-controls';
 import GUI from 'lil-gui';
+
+CameraControls.install( { THREE: THREE } );
 
 export class SceneManager {
     gui
@@ -15,6 +17,7 @@ export class SceneManager {
     raycaster
     composer
     focus
+    cameraMaxDistance
 
     constructor() {
         this.scene = new THREE.Scene();
@@ -23,23 +26,45 @@ export class SceneManager {
         this.raycaster = new THREE.Raycaster();
         this.composer = new EffectComposer(this.renderer);
         this.focus = null
+        this.cameraMaxDistance = 100
+        this.cameraMinDistance = 20
 
-        // Camera
-        this.camera = new THREE.PerspectiveCamera(
+        // Camera 
+        this.mainCamera =new THREE.PerspectiveCamera(
+            75,
+            window.innerWidth / window.innerHeight,
+            2,
+            1000
+        );
+        this.mainCamera.position.x = 20;
+        this.mainCamera.position.y = 20;
+        this.mainCamera.position.z = 40;
+
+
+        // camera mesh
+        this.cameraGeometry = new THREE.SphereGeometry(1, 32, 32);
+        this.cameraMaterial = new THREE.MeshLambertMaterial({ color: 0xff0000 });
+        this.cameraMesh = new THREE.Mesh(this.cameraGeometry, this.cameraMaterial);   
+
+
+        this.OrthographicCamera = new THREE.OrthographicCamera( window.innerWidth / - 2, window.innerWidth / 2,  window.innerHeight / 2,  window.innerHeight / - 2, 1, 1000 );
+
+        this.debugCamera =new THREE.PerspectiveCamera(
             75,
             window.innerWidth / window.innerHeight,
             1,
             1000
         );
-        this.camera.position.x = 20;
-        this.camera.position.y = 20;
-        this.camera.position.z = 40;
+
+        this.renderCamera = this.mainCamera
+
+
 
         // Basic render pass, ie render everything in the scene
-        const renderPass = new RenderPass(this.scene, this.camera);
+        const renderPass = new RenderPass(this.scene, this.renderCamera);
 
         // Add and configure the outline render pass
-        this.outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), this.scene, this.camera);
+        this.outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), this.scene, this.renderCamera);
         this.outlinePass.edgeStrength = 3;
         this.outlinePass.edgeGlow = 0.5;
         this.outlinePass.edgeThickness = 1;
@@ -54,18 +79,13 @@ export class SceneManager {
         document.body.appendChild(this.renderer.domElement);
 
 
-
-
         // Controls
-        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-        this.controls.target.set(0, 0, 0); // Set the look at point to the center of the star
+        this.controls = new CameraControls(this.renderCamera, this.renderer.domElement);
+        this.controls.setOrbitPoint(0, 0, 0); // Set the look at point to the center of the star
         this.controls.enableZoom = true;
         this.controls.zoomSpeed = 1.0;
-        this.controls.enableDamping = true;
-        this.controls.dampingFactor =0.05
         this.controls.maxDistance = 100
         this.controls.minDistance = 1
-        this.controls.update(); // Must be called after any manual changes to the camera's transform
 
         // init lil-gui
         this.gui = new GUI();
@@ -79,7 +99,10 @@ export class SceneManager {
   
 
         // events
-        let isDragging = false;
+        this.isDragging = false;
+        this.mouseIsDown = false
+        this.isScrolling = false
+        this.scrolldeltaY = 0
         let startX = 0;
         let startY = 0;
         const threshold = 5; // Movement threshold to differentiate between click and drag
@@ -98,35 +121,87 @@ export class SceneManager {
         });
 
         document.addEventListener('dblclick', (event) => this.onDoubleClick(event));
-
-
         
-        document.addEventListener('mousedown', function(event) {
+        document.addEventListener('mousedown', (event) => {
             // Store the starting point
             startX = event.pageX;
             startY = event.pageY;
-            isDragging = false;
+            this.isDragging = false;
+            this.mouseIsDown = true;
+
+
         });
         
-        document.addEventListener('mousemove', function(event) {
-            // Check if the mouse has moved more than the threshold
-            if (Math.abs(startX - event.pageX) > threshold || Math.abs(startY - event.pageY) > threshold) {
-                isDragging = true;
+        document.addEventListener('mousemove', (event) => {
+            this.isDragging = false
+
+            if (this.mouseIsDown){
+                if (Math.abs(startX - event.pageX) > threshold || Math.abs(startY - event.pageY) > threshold) {
+                    this.isDragging = true;
+                }
             }
         });        
 
         document.addEventListener('mouseup', (event) => {
-            if (isDragging) {
+            if (this.isDragging) {
+
+                this.dragHandler()
+
+
                 // handle dragging
+                //console.log('mouseUp: isDragging');
+                //this.cameraRotation = this.camera.rotation
+                //this.cameraPosition = this.camera.position
+
+                //console.log("new camera position y:", this.camera.position.y)
+
+
             } else {
-                console.log('Click detected');
-                this.onClick(event)
+                console.log('mouseup: click');
+                this.onClickHandler(event)
 
             }
             // Reset dragging state
-            isDragging = false;
-        });        
+            this.isDragging = false;
+            this.mouseIsDown = false
+        });     
+        
+        let scrollTimeout = null;
+        document.addEventListener('wheel', (event) => {
+            this.isScrolling = true
+            this.scrolldeltaY = event.deltaY
+            console.log(event.deltaY)
 
+            // Clear the previous timeout, if any
+            if (scrollTimeout !== null) {
+                clearTimeout(scrollTimeout);
+            }
+
+            // Set a new timeout
+            scrollTimeout = setTimeout(() => {
+                console.log('Scrolling has stopped');
+                this.isScrolling = false
+                // Perform any actions you need after scrolling has stopped
+            }, 100); // 150 milliseconds is a common choice, but adjust as needed
+
+        });  
+
+        //this.cameraRotation = this.camera.rotation
+        //this.cameraPosition = this.camera.position
+
+        this.lastZoom = this.controls.distance; // Track the last zoom level
+        this.lastAzimuthAngle = this.controls.azimuthAngle; // Track the last azimuth angle
+        this.lastPolarAngle = this.controls.polarAngle; // Track the last polar angle
+        this.lastDistance = 10
+
+
+    }    
+
+    disposeOrbitControl() {
+        if (this.controls) {
+            this.controls.dispose(); // Remove event listeners
+            this.controls = null; // Allow the controls to be garbage collected
+        }
     }
 
     getSelected(event) {
@@ -136,11 +211,12 @@ export class SceneManager {
         const mouse = new THREE.Vector2(mouseX, mouseY)
 
         // Update the picking ray with the camera and mouse position
-        this.raycaster.setFromCamera(mouse, this.camera);
+        this.raycaster.setFromCamera(mouse, this.renderCamera);
 
         // Calculate objects intersecting the picking ray
-        const intersects = this.raycaster.intersectObjects(this.scene.children);
+        const intersects = this.raycaster.intersectObjects(this.scene.children); // sorted list of intersects
 
+        // the first elmenet of intersects is also nearest to camera
         if (intersects.length) {
             const selected = intersects[0]
             return selected.object.userData.planet
@@ -149,8 +225,9 @@ export class SceneManager {
         return null
     }
 
-    onClick(event) {
+    onClickHandler(event) {
         const selected = this.getSelected(event)
+
 
         if (selected) {
             console.log(selected.properties.name)
@@ -164,43 +241,147 @@ export class SceneManager {
     }    
 
     onDoubleClick(event) {
-        console.log("double click")
         const selected = this.getSelected(event)
 
         if (selected) {
             this.focus = selected
         } else {
-            console.log("clicked nothing")
-            this.focus = null
-                   
+            this.focus = null  
         }
 
+        this.togglePlanetaryCamera()
+    }
 
+    dragHandler() {
+        // a planet is in focus, camera should be centered on it
+        if(this.focus !== null) {
+            console.log(`${this.focus.properties.name} is in focus`)
+
+
+
+        }
 
     }
 
-    updateCameraPosition() {
-       
+    togglePlanetaryCamera() {
+        if (this.focus) {
+            const planetPosition = this.focus.planetMesh.position
+
+            //this.camera.position.x += planetPosition.x + this.cameraPosition?.x
+            //this.camera.position.z += planetPosition.z + this.cameraPosition?.z
+            //this.camera.position.y += planetPosition.y + this.cameraPosition?.y
+
+            //this.controls.target.copy(planetPosition)
+            //this.controls.update();     
+            //this.camera.lookAt(this.focus)
+            //this.camera.updateProjectionMatrix();
+        } else {
+
+        }
+    }
+
+
+    normalizeRadians(angle) {
+        return angle % (2 * Math.PI);
+    }
+
+    updateCameraPosition(dT) {
+
+        if (!this.focus) return;
+
+        const meanAnomalyNormalized = this.normalizeRadians(this.focus.properties.M)
+
+            const {x,y,z} = this.focus.planetMesh.position
+            this.controls.setTarget(x, y, z, true);
+            //this.controls.rotateAzimuthTo( 30 * THREE.MathUtils.DEG2RAD, true );
+            //this.controls.rotateAzimuthTo( meanAnomalyNormalized, true );
+            
+            
+            //this.controls.moveTo(x, y, z)
+
+            if (!this.isScrolling) {
+                this.controls.dollyTo(this.lastDistance, true)
+            } else {
+                this.lastDistance = this.controls.distance
+            }
+
+            if (!this.isDragging) {
+                this.controls.rotateAzimuthTo( this.lastAzimuthAngle, true );
+                this.controls.rotatePolarTo( this.lastPolarAngle, true );               
+            } else {
+                this.lastAzimuthAngle = this.controls.azimuthAngle; // Track the last azimuth angle
+                this.lastPolarAngle = this.controls.polarAngle; // Track the last polar angle
+            }
+
+
+
+            this.controls.update( dT );
+        
+
+
+
+
+
+        /*
+
+
+        /// V1 FAIL
+
         if(this.focus !== null) {
 
             const planetPosition = this.focus.planetMesh.position
-   
-            /*
-            this.camera.position.x = planetPosition.x - 10
-            this.camera.position.y = planetPosition.y +10
-            this.camera.position.z = planetPosition.z - 10
-            */
-            this.camera.lookAt(planetPosition); // Set the look at point to the center of the            
+
+            if (this.mouseIsDown && this.isDragging) {
+                console.log("rotating camera camera")
+
+                // use orbital controls
+                //this.cameraRotation = this.camera.rotation // vector3
+                this.cameraPosition = this.camera.position // vector3
+                console.log(this.cameraPosition?.y)
+                
+                if (!this.controls) {
+                    this.controls = initiateOrbitControls(this.camera, this.renderer)
+                }
+    
+
+            } else {
+
+                console.log("fixed camera")
+
+                if (this.controls) {
+                    this.controls.dispose(); // Remove event listeners
+                    this.controls = null; // Allow the controls to be garbage collected
+                }
+
+
+                // fix position to pre
+                console.log("stored camera position", this.cameraPosition?.y)
+                this.camera.position.x += planetPosition.x + this.cameraPosition?.x
+                this.camera.position.z += planetPosition.z + this.cameraPosition?.z
+                this.camera.position.y += planetPosition.y + this.cameraPosition?.y
+            }
+
+            //this.camera.lookAt(this.focus); // Set the look at point to the center of the            
             
-            this.controls.target.copy(planetPosition);
-            this.controls.maxDistance = 10
-            this.controls.minDistance = 10
+            //this.controls.target.copy(planetPosition);
+
+            // kinda hacky way to keep the camera at a fixed distance while rotating
+            // note: causes some strange jittering
+            //this.controls.maxDistance = 10 //this.cameraMinDistance
+            //.controls.minDistance = 10 //this.cameraMinDistance
             
-            this.controls.update();     
-             
+            //this.controls.update();     
+            //this.camera.updateProjectionMatrix();
+
+
         } else {
-            this.controls.maxDistance = 100
+            if (!this.controls) {
+                this.controls = initiateOrbitControls(this.camera, this.renderer)
+            }
+
+            this.camera.updateProjectionMatrix();
+            this.controls.maxDistance = this.cameraMaxDistance
             this.controls.update();     
-        }
+        }*/
     }
 }

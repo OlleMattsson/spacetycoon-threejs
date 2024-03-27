@@ -29,16 +29,17 @@ initSolarSystem(gui, scene, composer, camera)
 const dynPlanets = []
 
 // first planetary system
-const olmia = new Planet({a: 12, omega: 220, e: 0, i: 0, trailLength: 1000, mass: 200000, size: 2, drawCone: true, solarSystem, planetColor: 0x0000ff, name: "Olmia"})
-const moon1 = new Planet({a: 4, orbitalParent: olmia, trailLength: 0, trailColor: 0xffffff, i: 20,size: 0.5, planetColor: 0xb09278, name: "Aave"})
+const olmia = new Planet({texturePath: './bitmaps/2k_earth_daymap.jpg', a: 12, omega: 220, e: 0, i: 0, trailLength: 1000, mass: 200000, size: 2, drawCone: true, solarSystem, planetColor: 0x0000ff, name: "Olmia"})
+const moon1 = new Planet({texturePath: './bitmaps/2k_moon.jpg', a: 4, orbitalParent: olmia, trailLength: 0, trailColor: 0xffffff, i: 20,size: 0.5, planetColor: 0xb09278, name: "Aave"})
 
 // second planetary system
-const pandora = new Planet({a: 35, i: 0, e: 0, trailLength: 2000, mass: 1000000, size: 3, drawCone: true, planetColor: 0x6e138f, name: "Pandora"})
+const pandora = new Planet({texturePath: './bitmaps/2k_neptune.jpg',a: 35, i: 0, e: 0, trailLength: 2000, mass: 1000000, size: 3, drawCone: true, planetColor: 0x6e138f, name: "Pandora"})
 const titan = new Planet({a: 5, orbitalParent: pandora, trailLength: 0, trailColor: 0xffffff, i: 0, size: 0.5, name: "Titan"})
 const perseus = new Planet({a: 8, orbitalParent: pandora, trailLength: 0, trailColor: 0xffffff, i: 10, size: 0.6, planetColor: 0x754e00, name: "Perseus"})
 const styx = new Planet({a: 10, orbitalParent: pandora, trailLength: 0, trailColor: 0xffffff, i: 80, size: 0.3, planetColor: 0xff7700, name: "Styx"})
 
 dynPlanets.push(olmia, pandora, moon1,  titan, perseus, styx)
+//dynPlanets.push(olmia, pandora, moon1)
 
 // add all planetary assets to scene
 dynPlanets.forEach(p => {
@@ -62,6 +63,7 @@ function addPlanetHandler() {
 }
    
 scene.add(solarSystem);
+scene.add(sm.cameraMesh)
 
 // Create 10000 stars within a spread of 2000 units
 const stars = createStarField(4500, 2000, 300);
@@ -137,14 +139,20 @@ function updateSimulation() {
 /**
  * ANIMATION LOOP
  */
-
-let pT = 0;                     // Timestamp of previous frame, previousTime
+let pT = 0;  
+const clock = new THREE.Clock();
 function animate(time = 0) {    // default to 0, otherwise time is undefined on the very first frame
     const dT = (time - pT);     // calculate deltaTime in milliseconds, dT
     pT = time;                  // Update lastTime for the next frame  
+    const delta = clock.getDelta();                   // Timestamp of previous frame, previousTime
 
-    // update amera
-    sm.updateCameraPosition()
+    
+    
+    sm.updateCameraPosition(delta)
+    sm.controls.update( delta );
+
+
+    sm.cameraMesh.position.copy(sm.mainCamera.position) // update the camera mesh for the debug view
 
     // update planets
     dynPlanets.forEach((p, i) => {
@@ -248,7 +256,6 @@ function animate(time = 0) {    // default to 0, otherwise time is undefined on 
     */
     
 
-    controls.update();
     composer.render(scene, camera);
     requestAnimationFrame(animate);
 }

@@ -22,6 +22,7 @@ export class Planet {
     parent // parent body of orbit
     size
     name
+    texturePath
 
     constructor({
         mass = 1000, 
@@ -38,7 +39,8 @@ export class Planet {
         size = 1,
         drawCone = false,
         solarSystem = null, // group
-        name = ""
+        name = "",
+        texturePath = null
     }){
         this.mass = mass
         this.planetColor = planetColor
@@ -48,20 +50,37 @@ export class Planet {
         this.solarSystem = solarSystem
 
         this.properties = {
+            // Keplerian motion
             i, // inclination in degrees
             a, // Semi-major axis in meters 
             e, // eccentricity 0 = circular, 0 < e < 1 =  elliptic, 1 = parabolic, e > 1 hyperbolic
             M, // Mean Anomaly in radians, 
             omega, // Longitude of the Ascending Node in degrees
             w,  // Argument of Periapsis in degrees
+
+
+
             trailLength,
             size,
             name
         }
 
+        this.lastPosition = new THREE.Vector3()
+
+        const loader = new THREE.TextureLoader();
+        let planetTexture
+        if (texturePath) {
+            console.log(texturePath)
+            planetTexture = loader.load(texturePath);
+            this.planetMaterial = new THREE.MeshBasicMaterial({ map: planetTexture });
+        } else {
+            this.planetMaterial = new THREE.MeshLambertMaterial({ color: this.planetColor });
+        }
+
+
+
         // planet mesh
         this.planetGeometry = new THREE.SphereGeometry(this.properties.size, 32, 32);
-        this.planetMaterial = new THREE.MeshLambertMaterial({ color: this.planetColor });
         this.planetMesh = new THREE.Mesh(this.planetGeometry, this.planetMaterial);   
         this.planetMesh.userData.planet = this; // Store a reference to the instance
 
@@ -331,7 +350,7 @@ export class Planet {
     updatePlanetPosition(deltaTime) {
 
         const position = this.getPlanetPosition(deltaTime)
-
+        //this.lastPosition = position;
         // set the the position of the planet mesh
         // Z and Y positions are switched so that orbits are mapped to the X,Z plane 
         // which lays flat instead of teh XY plane which is vertical 
@@ -353,7 +372,6 @@ export class Planet {
         const _i = (i) * Math.PI / 180
         const _omega = omega * Math.PI / 180
         const _w = w * Math.PI / 180
-
 
         // Standard Gravitational parameter 
         // We only need the mass of the central body
@@ -378,11 +396,9 @@ export class Planet {
             this.properties.M = M
         }
          
-        // Simplified conversion from mean anomaly to true anomaly (ν)
-        // This is a very rough approximation for small eccentricities
-        let E = M + e * Math.sin(M); // Eccentric anomaly, approximate
-        //let E = M + e * Math.sin(M); // Eccentric anomaly, approximate
-        let nu = 2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2)); // True anomaly, approximate
+        const E = this.eccentricAnomalyFromMeanAnomaly(M, e)
+
+        const nu = 2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2)); // True anomaly, approximate
 
         // Calculate position in the orbit plane
         let r = a * (1 - e * Math.cos(E)); // Distance from the central body
@@ -720,13 +736,15 @@ export class Planet {
         }
     }
 
-    eccentricAnomalyFromMeanAnomaly(M, e, maxIter = 5) {
+    eccentricAnomalyFromMeanAnomaly(M, e, maxIter = 50) {
         let E = M; // Initial guess
-        let delta = 0.000001; // Convergence criteria
+        let delta = 0.00000001; // Convergence criteria
         let iter = 0;
         while (iter < maxIter) {
             let E_next = E + (M - E + e * Math.sin(E)) / (1 - e * Math.cos(E));
+
             if (Math.abs(E_next - E) < delta) break;
+
             E = E_next;
             iter++;
         }
