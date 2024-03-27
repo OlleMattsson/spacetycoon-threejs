@@ -45,7 +45,7 @@ dynPlanets.forEach(p => {
     //solarSystem.add(p.cone)
     solarSystem.add(p.parentLine)
     solarSystem.add(p.orbitLine)
-    //solarSystem.add(p.transferLine)
+    solarSystem.add(p.transferLine)
     solarSystem.add(p.ghostPlanetMesh)
 })
 

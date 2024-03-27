@@ -48,9 +48,9 @@ export class Planet {
         this.orbitalParent = orbitalParent
         this.drawCone = drawCone
         this.solarSystem = solarSystem
-
+        this.lastPosition = new THREE.Vector3()
         
-        this.orbitalElements = {
+        this.orbit = {
             // Keplerian motion
             i, // inclination in degrees
             a, // Semi-major axis in meters 
@@ -60,48 +60,31 @@ export class Planet {
             w,  // Argument of Periapsis in degrees            
         }
 
-        // TODO: remove the orbital elements from properties
+        // planet properties we want to steer form GUI
         this.properties = {
-            // Keplerian motion
-            i, // inclination in degrees
-            a, // Semi-major axis in meters 
-            e, // eccentricity 0 = circular, 0 < e < 1 =  elliptic, 1 = parabolic, e > 1 hyperbolic
-            M, // Mean Anomaly in radians, 
-            omega, // Longitude of the Ascending Node in degrees
-            w,  // Argument of Periapsis in degrees
-
-
-
             trailLength,
             size,
             name
         }
 
-        this.lastPosition = new THREE.Vector3()
 
         const loader = new THREE.TextureLoader();
-        let planetTexture
-        if (texturePath) {
-            console.log(texturePath)
-            planetTexture = loader.load(texturePath);
-            this.planetMaterial = new THREE.MeshLambertMaterial({ map: planetTexture });
-        } else {
-            this.planetMaterial = new THREE.MeshLambertMaterial({ color: this.planetColor });
-        }
-
 
 
         // planet mesh
+        const planetTexture = texturePath ? loader.load(texturePath) : null;
+        const planetMaterialProps = texturePath ? { map: planetTexture }: { color: this.planetColor }
+        this.planetMaterial = new THREE.MeshLambertMaterial(planetMaterialProps);
         this.planetGeometry = new THREE.SphereGeometry(this.properties.size, 32, 32);
         this.planetMesh = new THREE.Mesh(this.planetGeometry, this.planetMaterial);   
         this.planetMesh.userData.planet = this; // Store a reference to the instance
+
 
         // ghost planet used to display orbitPredictions
         this.ghostPlanetGeometry = new THREE.SphereGeometry(0.5, 32, 32);
         this.ghostPlanetMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 });
         this.ghostPlanetMesh = new THREE.Mesh(this.ghostPlanetGeometry, this.ghostPlanetMaterial);   
         this.ghostPlanetMesh.userData.planet = this; // Store a reference to the instance
-
 
         // planet trail
         this.trailGeometry = new THREE.BufferGeometry();        
@@ -111,7 +94,7 @@ export class Planet {
         this.pointIndex = 0; // Keep track of the last point added to the orbit path
         this.trailGeometry.setAttribute("position", new THREE.BufferAttribute(this.trailPositions, 3));
 
-        // line to parent
+        // line to parent, currently not used
         const parentLineMaterial = new THREE.LineBasicMaterial({color: 0xff00ff});
         this.parentLineGeometry = new THREE.BufferGeometry()
         this.orbiter2PlanetPositions = new Float32Array(2*3) // we need two points with three coordinates each
@@ -137,8 +120,9 @@ export class Planet {
 
     initPlanetUI(parentFolder, scene, camera, renderer) {
         const planetFolder = parentFolder.addFolder(this.properties.name).close()
-        const {properties} = this
+        const {properties, orbit} = this
 
+        // general stuff
         planetFolder.add(properties, "name")
             .name("Name")
             .onChange(v =>{
@@ -146,36 +130,6 @@ export class Planet {
                 renderer.render(scene, camera)
             })
 
-        planetFolder.add(properties, "i", -90, 90, 1)
-            .name("Inclination")
-            .onChange(v =>{
-                this.properties.i = v
-                renderer.render(scene, camera)
-            })
-        planetFolder.add(properties, "a")
-            .name("Semi-major axis")
-            .onChange(v =>{
-                this.properties.a = v
-                renderer.render(scene, camera)
-            })
-        planetFolder.add(properties, "e", 0, 0.99, 0.1)
-            .name("Eccentricity")
-            .onChange(v =>{
-                this.properties.e = v
-                renderer.render(scene, camera)
-            })
-        planetFolder.add(properties, "omega", 0, 360, 1)
-            .name("Lng Ascending")
-            .onChange(v =>{
-                this.properties.omega = v
-                renderer.render(scene, camera)
-            })
-        planetFolder.add(properties, "w", 0, 180, 1)
-            .name("Arg Periapsis (rad)")
-            .onChange(v =>{
-                this.properties.w = v
-                renderer.render(scene, camera)
-            })
         planetFolder.add(properties, "trailLength", 0, 1000, 100)
             .name("Trail Length")
             .onChange(v =>{
@@ -191,6 +145,38 @@ export class Planet {
                 this.properties.size = v
                 renderer.render(scene, camera)
             })
+
+        // orbit UI
+        planetFolder.add(orbit, "i", -90, 90, 1)
+            .name("Inclination")
+            .onChange(v =>{
+                this.orbit.i = v
+                renderer.render(scene, camera)
+            })
+        planetFolder.add(orbit, "a")
+            .name("Semi-major axis")
+            .onChange(v =>{
+                this.orbit.a = v
+                renderer.render(scene, camera)
+            })
+        planetFolder.add(orbit, "e", 0, 0.99, 0.1)
+            .name("Eccentricity")
+            .onChange(v =>{
+                this.orbit.e = v
+                renderer.render(scene, camera)
+            })
+        planetFolder.add(orbit, "omega", 0, 360, 1)
+            .name("Lng Ascending")
+            .onChange(v =>{
+                this.orbit.omega = v
+                renderer.render(scene, camera)
+            })
+        planetFolder.add(orbit, "w", 0, 180, 1)
+            .name("Arg Periapsis (rad)")
+            .onChange(v =>{
+                this.orbit.w = v
+                renderer.render(scene, camera)
+            })            
 
     }
 
@@ -231,7 +217,7 @@ export class Planet {
 
     drawTransferOrbit(toPlanet) {
         
-        const transferOrbit = this.calculateHohmannTransferOrbit(this.properties, toPlanet.properties, 5)
+        const transferOrbit = this.calculateHohmannTransferOrbit(this.orbit, toPlanet.orbit, 5)
 
         //console.log(transferOrbit.transferOrbit)
 
@@ -266,28 +252,7 @@ export class Planet {
         return 2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2));
     }
     
-    findOrbitIntersections(a1, e1, a2, M1) {
-        // Convert mean anomaly M1 to true anomaly for the inner orbit
-        const E1 = this.solveKeplersEquation(M1, e1);
-        const theta1Initial = this.trueAnomalyFromEccentricAnomaly(E1, e1);
-    
-        // Continue with the previous approach
-        const r2 = a2; // Radius of circular orbit is constant
-        const r1 = (theta) => a1 * (1 - e1 ** 2) / (1 + e1 * Math.cos(theta)); // Function to calculate r1
-    
-        let theta1Solution = [];
-        for (let theta1 = theta1Initial - Math.PI; theta1 < theta1Initial + Math.PI; theta1 += 0.01) {
-            if (Math.abs(r1(theta1) - r2) < 0.1) {
-                theta1Solution.push(theta1);
-            }
-        }
-    
-        return theta1Solution.map(theta1 => {
-            // Convert back to mean anomaly for output, simplified here as directly using theta1
-            // For a precise model, you'd convert true anomaly back to mean anomaly
-            return { meanAnomaly1: theta1, trueAnomaly1: theta1, trueAnomaly2: theta1 };
-        });
-    }
+
 
 
     calculateTransferOrbitAndLaunchWindow(departureOrbit, targetOrbit) {
@@ -377,8 +342,10 @@ export class Planet {
     }
 
     // get planet position at deltaTime 
+    // this function also updates the mean anomaly of the planet
+    // unless setMeanAnomaly = false
     getPlanetPosition(deltaTime, setMeanAnomaly = true) {
-        const {i, e, a, omega, w} = this.properties
+        const {i, e, a, omega, w} = this.orbit
 
         // convert elements in degrees to radians
         const _i = (i) * Math.PI / 180
@@ -400,12 +367,12 @@ export class Planet {
         const n = Math.sqrt(mu / Math.pow(a, 3));
 
         // update mean anomaly
-        const M = this.properties.M + n * deltaTime
+        const M = this.orbit.M + n * deltaTime
 
         // set the mean anomaly for main planet
         // for the ghost planet we only want to use M for calculations but not set it
         if (setMeanAnomaly) {
-            this.properties.M = M
+            this.orbit.M = M
         }
          
         const E = this.eccentricAnomalyFromMeanAnomaly(M, e)
@@ -444,15 +411,16 @@ export class Planet {
         )
     }
 
+    // useful when drawing orbits
     getPlanetPositionFromTrueAnomaly(nuDegrees) {
-        const {i, e, a, omega, w} = this.properties;
+        const {i, e, a, omega, w} = this.orbit;
     
         // Convert elements and true anomaly in degrees to radians
         const _i = i * Math.PI / 180; // No subtraction by 90; direct conversion
         const _omega = omega * Math.PI / 180;
         const _w = w * Math.PI / 180;
         const nu = nuDegrees * Math.PI / 180; // Convert true anomaly from degrees to radians
-        let E = this.properties.M + e * Math.sin(this.properties.M); // Eccentric anomaly, approximate
+        let E = this.orbit.M + e * Math.sin(this.orbit.M); // Eccentric anomaly, approximate
 
     
         // Calculate position in the orbit plane using given true anomaly nu
@@ -487,8 +455,9 @@ export class Planet {
         );
     } 
 
+    // curently not used
     getPlanetPositionFromMeanAnomaly(meanAnomalyDegrees) {
-        const {i, e, a, omega, w} = this.properties;
+        const {i, e, a, omega, w} = this.orbit;
     
         // Convert elements and mean anomaly in degrees to radians
         const _i = i * Math.PI / 180;
@@ -811,7 +780,9 @@ export class Planet {
              
         }
     
-        // we produce two solutions 
+        // two solutions are found 
+        // the negative mean anomaly is tossed away because it causes rendering issues
+
         const solutions = theta1Solution.map(theta1 => {
 
             // Convert true anomaly to eccentric anomaly
@@ -820,19 +791,13 @@ export class Planet {
             // Then convert eccentric anomaly to mean anomaly
             const M1 = this.eccentricAnomalyToMeanAnomaly(E1, e1);
 
+            // return only the positive result 
             if (M1 > 0) {
                 return { meanAnomaly1: M1, trueAnomaly1: theta1, trueAnomaly2: theta1 };
             }
  
         })
 
-        /*
-        solutions.sort((a, b) => a.meanAnomaly1 - b.meanAnomaly1); // Sort by mean anomaly
-
-        if (solutions && solutions.length && solutions[0].meanAnomaly1 > 0) {
-            //console.log(solutions[0].meanAnomaly1)
-            return solutions[0].meanAnomaly1
-        }*/
     }
 
     calculateTravelTimeToMeanAnomaly(a, M) {
@@ -853,7 +818,6 @@ export class Planet {
         
         return t; // Time in seconds
     }
-
 }
 
 
